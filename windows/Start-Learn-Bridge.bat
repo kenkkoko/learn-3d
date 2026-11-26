@@ -5,6 +5,7 @@ rem installed folder and the repo's windows\ folder.
 rem   Start-Learn-Bridge.bat                      start (and open the website)
 rem   learn3d-bridge://start  (from the website)  start, don't open the website again
 rem   learn3d-bridge://update (from the website)  download the latest bridge, replace, restart
+rem   learn3d-bridge://login  (from the website)  open the Claude Code login (claude auth login)
 setlocal
 title Learn 3D Bridge
 if "%LEARN3D_PORT%"=="" (set "PORT=8766") else (set "PORT=%LEARN3D_PORT%")
@@ -14,6 +15,7 @@ set "MODE=start"
 if defined ARG (
   set "LEARN3D_NO_BROWSER=1"
   if not "%ARG:update=%"=="%ARG%" set "MODE=update"
+  if not "%ARG:login=%"=="%ARG%" set "MODE=login"
 )
 
 rem -- find pyproject.toml: zip folder (next to this file), installed folder or the repo
@@ -51,6 +53,7 @@ if errorlevel 1 (
 )
 
 cd /d "%DIR%"
+if "%MODE%"=="login" goto login
 
 rem -- update: download the latest bridge from the website and replace this copy
 if "%MODE%"=="update" (
@@ -114,5 +117,22 @@ if exist "%DIR%Start-Learn-Bridge.bat.new" (
   endlocal
   exit /b 0
 )
+endlocal
+exit /b 0
+
+:login
+rem Claude Code login: the bridge ships its own Claude Code (inside the Agent SDK),
+rem so this works even when Claude Code was never installed separately.
+set "CLAUDE_EXE=%DIR%.venv\Lib\site-packages\claude_agent_sdk\_bundled\claude.exe"
+if not exist "%CLAUDE_EXE%" set "CLAUDE_EXE="
+if not defined CLAUDE_EXE for /f "delims=" %%P in ('where claude 2^>nul') do if not defined CLAUDE_EXE set "CLAUDE_EXE=%%P"
+if not defined CLAUDE_EXE (
+  echo [!] Claude Code was not found. Install it from https://claude.com/claude-code
+  start "" https://claude.com/claude-code
+  pause
+  exit /b 1
+)
+echo Opening the Claude Code login. Your browser will ask you to sign in with your Claude account.
+start "Learn 3D - Claude Code login" cmd /c ""%CLAUDE_EXE%" auth login & echo. & echo When it says Login successful, close this window and go back to the website. & pause"
 endlocal
 exit /b 0

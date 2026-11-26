@@ -15,6 +15,7 @@ import concurrent.futures
 import os
 import re
 import shutil
+import sys
 import tempfile
 import threading
 import time
@@ -65,6 +66,23 @@ def _cli_present() -> bool:
         ):
             return True
     return shutil.which("claude") is not None
+
+
+def logged_in() -> bool | None:
+    """Claude Code 有沒有登入：True / False；看不出來（macOS 存在鑰匙圈）回 None。
+
+    依官方文件：Windows / Linux 的登入存在 ~/.claude/.credentials.json（CLAUDE_CONFIG_DIR 可改位置）；
+    也可以用 ANTHROPIC_API_KEY、ANTHROPIC_AUTH_TOKEN、CLAUDE_CODE_OAUTH_TOKEN 環境變數。
+    只檢查檔案在不在，不讀內容。
+    """
+    if any(os.environ.get(k) for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN")):
+        return True
+    cfg = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+    if os.path.isfile(os.path.join(cfg, ".credentials.json")):
+        return True
+    if sys.platform == "darwin":
+        return None
+    return False
 
 
 def friendly_error(msg: str) -> str:
@@ -127,6 +145,10 @@ class ClaudeProvider(LLMProvider):
         if not _cli_present():
             return ProviderInfo(**base, available=False,
                                 reason="沒有找到 Claude Code（請先安裝 Claude Code 並在終端機執行 claude 登入）")
+        if logged_in() is False:
+            return ProviderInfo(**base, available=False, needs_login=True, models=FALLBACK_MODELS,
+                                efforts=ALL_EFFORTS,
+                                reason="已安裝，但還沒登入：按「登入 Claude Code」，用你自己的 Claude Pro / Max 帳號登入")
 
         async def _probe() -> list[dict[str, Any]]:
             # 只連線取得初始化資訊（模型清單），不送出任何提示，不花 token

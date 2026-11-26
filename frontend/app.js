@@ -82,6 +82,12 @@ let sceneMod = null;
 let webgl = true;
 
 const app = $("#app");
+// 版面容器（面板、中間、左欄、整個 app）本來就不該捲動：只有裡面的 .panel-body / 清單會捲。
+// 瀏覽器聚焦某個元素時可能會偷偷捲動 overflow:hidden 的容器，造成「整塊往上跑、下面露出黑色」，這裡一律拉回原位。
+for (const sel of ["#app", "#panel", "#stage", "#sidebar"]) {
+  const el = document.querySelector(sel);
+  el?.addEventListener("scroll", () => { if (el.scrollTop || el.scrollLeft) { el.scrollTop = 0; el.scrollLeft = 0; } });
+}
 const mqMobile = window.matchMedia("(max-width: 767px)");
 const isMobile = () => mqMobile.matches;
 
@@ -103,7 +109,8 @@ function setBridgeStatus(kind, note = "") {
 function renderBridgeUi() {
   const kind = state.bridge;
   const avail = state.providers.filter((p) => p.available).map((p) => p.name);
-  const short = kind === "ok" ? (avail.length ? `已連線 · ${avail.join("、")}` : "已連線 · 沒有可用的 AI 工具")
+  const needLogin = state.providers.find((p) => p.needs_login);
+  const short = kind === "ok" ? (avail.length ? `已連線 · ${avail.join("、")}` : needLogin ? `已連線 · ${needLogin.name} 還沒登入` : "已連線 · 沒有可用的 AI 工具")
     : kind === "checking" ? "偵測中…"
     : kind === "mock" ? "示範模式（?mock=1）"
     : kind === "lost" ? "已中斷 · 按這裡重新啟動"
@@ -135,9 +142,10 @@ function renderBridgeUi() {
 
   const list = $("#bdAi");
   list.hidden = kind !== "ok" || !state.providers.length;
-  list.replaceChildren(...state.providers.map((p) => h("li", { class: p.available ? null : "na" },
+  list.replaceChildren(...state.providers.map((p) => h("li", { class: p.available ? null : p.needs_login ? "na login" : "na" },
     h("span", null, p.name),
-    h("small", null, p.available ? (p.models?.length ? `模型：${p.models.slice(0, 4).join("、")}` : "可用") : (p.reason || "不可用")))));
+    h("small", null, p.available ? (p.models?.length ? `模型：${p.models.slice(0, 4).join("、")}` : "可用") : (p.reason || "不可用")),
+    p.needs_login ? h("button", { type: "button", class: "btn btn-primary small bd-login", onclick: loginClaude }, loggingIn ? "等待登入…" : `登入 ${p.name}`) : null)));
 
   $("#bdDenied").hidden = bridgeUi.perm !== "denied" || kind === "ok";
   $("#bdUpdate").hidden = !bridgeUi.update;
@@ -859,7 +867,7 @@ async function startLesson(req = {}, trigger) {
     if (state.topic !== topic) return;
     setPanelHead("一問一答", "出題失敗");
     qa.replaceChildren(
-      h("div", { class: "notice err", role: "alert" }, errMsg(e) || FALLBACK_MSG),
+      h("div", { class: "notice err", role: "alert" }, bridgeErrorText(e) || FALLBACK_MSG),
       h("div", { class: "v-actions" },
         h("button", { type: "button", class: "btn btn-primary", onclick: () => startLesson(req) }, "再試一次"),
         h("button", { type: "button", class: "btn btn-ghost", onclick: closePanel }, "先到這")));
@@ -1284,7 +1292,7 @@ async function submitAnswer(l, form, ta, confName, msg, submitBtn, result) {
   const conf = form.querySelector(`input[name="${confName}"]:checked`)?.value;
   const answer = ta.value;
   msg.classList.remove("err");
-  if (!conf) { msg.textContent = "請先選把握度：🟢 有把握、🟡 不太確定，或 🔴 用猜的。"; msg.classList.add("err"); form.querySelector(`input[name="${confName}"]`).focus(); return; }
+  if (!conf) { msg.textContent = "請先選把握度：🟢 有把握、🟡 不太確定，或 🔴 用猜的。"; msg.classList.add("err"); form.querySelector(`input[name="${confName}"]`).focus({ preventScroll: true }); return; }
   if (!answer.trim()) { msg.textContent = "還沒寫答案喔。"; msg.classList.add("err"); ta.focus(); return; }
   const limit = Number(ta.getAttribute("maxlength")) || 2000;
   if (answer.length > limit) { msg.textContent = `答案太長了（上限 ${limit} 字）。`; msg.classList.add("err"); return; }
@@ -1322,7 +1330,7 @@ async function submitAnswer(l, form, ta, confName, msg, submitBtn, result) {
   } catch (e) {
     gpv.stop();
     setBusy(false);
-    result.replaceChildren(h("div", { class: "notice err", role: "alert" }, errMsg(e) || FALLBACK_MSG),
+    result.replaceChildren(h("div", { class: "notice err", role: "alert" }, bridgeErrorText(e) || FALLBACK_MSG),
       h("div", { class: "v-actions" }, h("button", { type: "button", class: "btn btn-primary", onclick: () => form.requestSubmit() }, "重試")));
     return;
   }
@@ -1447,7 +1455,8 @@ function bridgeErrorText(e) {
     if (!bridgeUi.update) { bridgeUi.update = { canAuto: !!bridgeUi.info?.build }; renderBridgeUi(); }
     return "你電腦上的橋接是舊版（「想學什麼」只接受很短的字數），請按左下角「本機橋接」更新到新版後再送出。";
   }
-  return errMsg(e);
+  const m = errMsg(e);
+  return /登入/.test(m) && /Claude/.test(m) ? `${m}（按左下角「本機橋接」→「登入 Claude Code」）` : m;
 }
 
 function ntStep(n) {
@@ -1718,6 +1727,39 @@ $("#testBridge").addEventListener("click", async (ev) => {
 
 // 「啟動橋接」：透過安裝時註冊的 learn3d-bridge:// 連結打開本機橋接，再等它回應。
 // 瀏覽器不能直接啟動電腦裡的程式，所以第一次要先執行安裝檔註冊這個連結（SmartDCA 同樣做法）。
+/**
+ * 登入 Claude Code：透過 learn3d-bridge://login 讓橋接打開登入視窗（claude auth login，瀏覽器登入 Claude 帳號），
+ * 再每 4 秒重新偵測 AI 工具，登入完成就自動變成可用。
+ */
+let loggingIn = false;
+async function loginClaude() {
+  if (loggingIn) return;
+  loggingIn = true;
+  bridgeUi.note = "電腦上會跳出「Learn 3D - Claude Code login」視窗，接著瀏覽器會要你登入 Claude 帳號（需要 Claude Pro 或 Max 訂閱）。看到 Login successful 就完成了。";
+  renderBridgeUi();
+  window.location.href = "learn3d-bridge://login";
+  let ok = false;
+  for (let i = 0; i < 45 && !ok; i++) {        // 最多約 3 分鐘
+    await new Promise((r) => setTimeout(r, 4000));
+    try {
+      const r = await api.providers(true);
+      state.providers = r.providers || [];
+      ok = state.providers.some((p) => p.id === "claude" && p.available);
+    } catch { /* 橋接忙碌：下一輪再試 */ }
+    if (i === 8 && !ok) {
+      bridgeUi.note = "還沒偵測到登入。沒有跳出登入視窗的話：舊版橋接不支援這個按鈕，請先「手動下載新版」重裝橋接；或自己打開命令提示字元執行 claude auth login。";
+    }
+    renderBridgeUi();
+  }
+  loggingIn = false;
+  if (ok) {
+    bridgeUi.note = "Claude Code 登入成功，可以開始出題了。";
+    renderAiSettings();
+    toast("Claude Code 已登入");
+  }
+  renderBridgeUi();
+}
+
 let launching = false;
 async function launchBridge() {
   if (launching) return;
@@ -1784,12 +1826,22 @@ $("#updateBridgeBtn").addEventListener("click", async (ev) => {
   launching = true;                              // 更新期間心跳不要誤報「中斷」
   window.location.href = "learn3d-bridge://update";
   const want = await expectedBuild();
-  let done = false;
-  for (let i = 0; i < 60 && !done; i++) {      // 最多約 3 分鐘（下載 + 重新安裝套件）
+  const oldBuild = bridgeUi.info?.build;
+  let done = false, wentDown = false, backOld = false;
+  bridgeUi.note = "正在更新：電腦上會跳出一個「Learn 3D Bridge」視窗下載新版，請不要關掉它。";
+  renderBridgeUi();
+  for (let i = 0; i < 40 && !done && !backOld; i++) {      // 最多約 2 分鐘（下載 + 重新安裝套件）
     await new Promise((r) => setTimeout(r, 3000));
     const r = await probeBridge();
+    if (!r.ok) wentDown = true;
     done = r.ok && r.info?.build === want;
+    // 舊橋接停過又回來、版本卻沒變：更新沒成功（較早安裝的橋接，更新流程本身有問題），不用再等
+    backOld = r.ok && wentDown && r.info?.build === oldBuild;
     btn.textContent = `更新中…${(i + 1) * 3} 秒`;
+    if (i === 10 && !done) {
+      bridgeUi.note = "等了 30 秒還沒好：如果電腦上沒有跳出更新視窗，或視窗出現錯誤，請改用「手動下載新版」→ 解壓縮 → 雙擊 Install-Learn-Bridge.bat（只要做一次，之後一鍵更新就正常）。";
+      renderBridgeUi();
+    }
   }
   launching = false;
   btn.disabled = false;
@@ -1800,8 +1852,11 @@ $("#updateBridgeBtn").addEventListener("click", async (ev) => {
     await detectBridge({ userGesture: true });
     await loadProviders(true);
   } else {
-    bridgeUi.note = "更新沒有完成：請按「手動下載新版」，解壓縮後重新執行 Install-Learn-Bridge.bat。";
+    bridgeUi.note = backOld
+      ? "一鍵更新沒有成功（你的橋接是較早安裝的版本，它的更新程式有問題）。請按「手動下載新版」，解壓縮後雙擊 Install-Learn-Bridge.bat 重新安裝一次；之後的一鍵更新就會正常。"
+      : "更新沒有完成：請按「手動下載新版」，解壓縮後雙擊 Install-Learn-Bridge.bat 重新安裝一次（會自動關掉舊橋接再覆蓋）。";
     renderBridgeUi();
+    if ((await probeBridge()).ok) await detectBridge({ userGesture: true });
   }
 });
 
