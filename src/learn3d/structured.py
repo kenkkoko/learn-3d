@@ -79,7 +79,9 @@ def call_structured(
     """呼叫 LLM 並回傳通過驗證（含 extra_check）的 model；全部失敗回傳 None。"""
     schema = model_cls.model_json_schema()
     feedback = ""
+    provider_error: ProviderError | None = None  # 最後一次失敗若是 AI 工具本身的問題（沒登入、額度用完…）
     for attempt in range(1, max_retries + 1):
+        provider_error = None
         prompt = user if not feedback else _retry_prompt(user, feedback)
         t0 = time.perf_counter()
         raw = ""
@@ -98,6 +100,7 @@ def call_structured(
         except ProviderError as e:
             error = str(e)
             give_up = not e.retryable
+            provider_error = e
         except Exception as e:  # noqa: BLE001 — 任何例外都要記錄並重試
             error = f"{type(e).__name__}: {e}"
 
@@ -120,4 +123,8 @@ def call_structured(
         if give_up:
             break
         feedback = (error or "未知錯誤")[:_MAX_ERR * 2]
+    if provider_error is not None:
+        # 不是 AI 輸出格式的問題，而是 AI 工具用不了：把原因（例如「請執行 claude 登入」）交給 API 層顯示，
+        # 不要變成看不出原因的「暫時無法產生」。
+        raise provider_error
     return None

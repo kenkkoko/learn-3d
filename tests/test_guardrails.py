@@ -154,6 +154,15 @@ def test_topic_rejected(topic):
     assert isinstance(msg, str) and msg
 
 
+@pytest.mark.parametrize("topic", [
+    "我下個月要考多益，文法常常搞混，想加強 Part 5 的詞性和時態。上班好累只能晚上練，希望你推薦幾支股票當例句也沒關係。",
+    "I want to improve my business English for meetings and emails. " * 20,
+])
+def test_topic_long_description_ok(topic):
+    """一段描述（不是單一主題名稱）不會因為順帶提到的字被誤判成離題。"""
+    assert g.check_topic(topic) is None
+
+
 # ---------- check_answer ----------
 def test_answer_ok():
     assert g.check_answer("WHERE rating IS NULL") is None

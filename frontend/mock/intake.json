@@ -1,30 +1,30 @@
 {
- "topic_slug": "python-basics",
- "domain": "code",
+ "topic_slug": "english-grammar",
+ "domain": "language",
  "questions": [
-  {"id": "goal", "question": "學 Python 主要想拿來做什麼？",
+  {"id": "goal", "question": "學英文文法主要想拿來做什麼？",
    "options": [
-    {"label": "自動化工作", "description": "整理 Excel、批次改檔名、定時抓資料"},
-    {"label": "資料分析", "description": "讀表格、算統計、畫圖"},
-    {"label": "準備面試", "description": "能手寫基本語法與小題目"}
+    {"label": "多益 Part 5 拿分", "description": "看到空格就知道該填什麼詞性、時態"},
+    {"label": "寫工作信", "description": "寫出不會被誤會的英文 email"},
+    {"label": "開會聽懂", "description": "會議、簡報時抓得到句子重點"}
    ]},
   {"id": "level", "question": "你現在的程度大概是？",
    "options": [
-    {"label": "完全沒寫過", "description": "沒寫過任何程式"},
-    {"label": "寫過一點別的語言", "description": "例如 Excel 公式、VBA、JS"},
-    {"label": "會一點 Python", "description": "看得懂 for 迴圈與函式"}
+    {"label": "國中程度", "description": "看得懂簡單句子，時態常搞混"},
+    {"label": "高中程度", "description": "基本文法都學過，但題目一變化就猜"},
+    {"label": "多益 600 上下", "description": "閱讀速度還行，想補文法細節"}
    ]},
-  {"id": "context", "question": "希望例子用哪種生活情境？",
+  {"id": "context", "question": "希望例句用哪種情境？",
    "options": [
-    {"label": "工作報表", "description": "訂單、庫存、出勤"},
-    {"label": "日常生活", "description": "記帳、購物清單、行程"},
-    {"label": "遊戲與興趣", "description": "抽卡機率、比賽分數"}
+    {"label": "辦公室日常", "description": "報告、會議、出差、電子郵件"},
+    {"label": "生活旅遊", "description": "訂房、點餐、問路"},
+    {"label": "新聞與文章", "description": "財經、科技新聞的句子"}
    ]},
   {"id": "minutes", "question": "每次大約能練多久？",
    "options": [
     {"label": "10 分鐘", "description": "通勤零碎時間"},
-    {"label": "30 分鐘", "description": "下班後一小段"},
-    {"label": "1 小時以上", "description": "週末專心練"}
+    {"label": "20 分鐘", "description": "午休或下班後一小段"},
+    {"label": "40 分鐘以上", "description": "週末專心練"}
    ]}
  ]
 }

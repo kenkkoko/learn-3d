@@ -38,6 +38,7 @@ __all__ = [
 
 PII_MASK = "[已遮蔽]"
 MAX_TOPIC_LEN = 2000  # 使用者常會寫一段話描述想學什麼
+SHORT_TOPIC_LEN = 40  # 以內視為「主題名稱」，超過視為一段描述
 MAX_ANSWER_LEN = 2000
 MAX_CODE_LEN = 5000
 
@@ -318,8 +319,10 @@ def check_topic(topic: str) -> str | None:
     if len(t) > MAX_TOPIC_LEN:
         return f"主題名稱太長了（{len(t)} 字），請精簡到 {MAX_TOPIC_LEN} 字以內。"
     if detect_injection(t):
-        return "主題名稱看起來像是給 AI 的指令，請只輸入想學的主題，例如「Python」「簡報技巧」。"
-    if _hits_offtopic(t):
+        return "這段文字裡有像是給 AI 的指令的句子（例如「忽略以上…」「你現在是…」「扮演…」），請改寫成單純描述想學什麼。"
+    # 明顯不是學習主題的請求只檢查「短的主題名稱」：一段描述裡常會順帶提到「推薦」「好累」之類的字，
+    # 原則是寧可漏抓也不要誤傷（描述本來就以不可信資料包起來交給 AI）。
+    if len(t) <= SHORT_TOPIC_LEN and _hits_offtopic(t):
         return "這看起來不是學習主題喔。請輸入想學的東西，例如「SQL」「日文 N4」「樂理」「簡報技巧」。"
     return None
 

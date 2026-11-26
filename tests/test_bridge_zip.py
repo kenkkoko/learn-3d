@@ -19,7 +19,11 @@ def test_committed_zip_is_up_to_date(tmp_path):
     """改了 src/ 或啟動檔卻沒重新打包時失敗：請執行 uv run python scripts/build_bridge_zip.py"""
     fresh = _builder().build(tmp_path / "fresh.zip")
     assert ZIP.exists(), "缺少 frontend/downloads/learn3d-bridge.zip"
-    assert fresh.read_bytes() == ZIP.read_bytes(), "橋接下載檔過期：請執行 uv run python scripts/build_bridge_zip.py"
+    # 比對「解壓後的內容」而不是壓縮後的位元組：不同電腦的 zlib 版本壓出來的位元組會不同
+    def contents(p):
+        with zipfile.ZipFile(p) as z:
+            return {n: z.read(n) for n in z.namelist()}
+    assert contents(fresh) == contents(ZIP), "橋接下載檔過期：請執行 uv run python scripts/build_bridge_zip.py"
 
 
 def test_zip_contents():

@@ -29,6 +29,15 @@ if not defined DIR (
 )
 
 rem -- uv (Python package manager) -----------------------------------------
+rem When the website starts this file, it inherits the browser's PATH, which may be
+rem older than the uv install (uv adds itself to PATH only for new programs).
+rem So also look in the folders the uv installers use.
+where uv >nul 2>nul
+if errorlevel 1 (
+  for %%D in ("%USERPROFILE%\.local\bin" "%USERPROFILE%\.cargo\bin" "%LOCALAPPDATA%\Microsoft\WinGet\Links" "%LOCALAPPDATA%\uv" "%ProgramData%\chocolatey\bin") do (
+    if exist "%%~D\uv.exe" set "PATH=%%~D;%PATH%"
+  )
+)
 where uv >nul 2>nul
 if errorlevel 1 (
   echo [!] uv is not installed. Open PowerShell and run:
@@ -51,7 +60,10 @@ if "%MODE%"=="update" (
     exit /b 0
   )
   echo Updating Learn 3D bridge from %SITE% ...
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $z=Join-Path $env:TEMP 'learn3d-bridge-update.zip'; $d=Join-Path $env:TEMP 'learn3d-bridge-update'; Invoke-WebRequest -UseBasicParsing '%SITE%/downloads/learn3d-bridge.zip' -OutFile $z; if (Test-Path $d) { Remove-Item -Recurse -Force $d }; Expand-Archive $z $d; Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('python.exe','pythonw.exe','uv.exe','learn3d-bridge.exe') -and $_.CommandLine -match 'learn3d' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; Start-Sleep -Seconds 1; robocopy (Join-Path $d 'learn3d-bridge') '%DIR%.' /E /XD .venv /NFL /NDL /NJH /NJS /NP | Out-Null; if ($LASTEXITCODE -ge 8) { exit 1 }; exit 0"
+  rem This file is running, so it is not overwritten here (cmd reads a running batch
+  rem file line by line; replacing it mid-run executes garbage). The new copy is saved
+  rem as Start-Learn-Bridge.bat.new and swapped in at :done, right before exiting.
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $z=Join-Path $env:TEMP 'learn3d-bridge-update.zip'; $d=Join-Path $env:TEMP 'learn3d-bridge-update'; Invoke-WebRequest -UseBasicParsing '%SITE%/downloads/learn3d-bridge.zip' -OutFile $z; if (Test-Path $d) { Remove-Item -Recurse -Force $d }; Expand-Archive $z $d; Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('python.exe','pythonw.exe','uv.exe','learn3d-bridge.exe') -and $_.CommandLine -match 'learn3d' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; Start-Sleep -Seconds 1; $s=Join-Path $d 'learn3d-bridge'; robocopy $s '%DIR%.' /E /XD .venv /XF Start-Learn-Bridge.bat /NFL /NDL /NJH /NJS /NP | Out-Null; if ($LASTEXITCODE -ge 8) { exit 1 }; Copy-Item (Join-Path $s 'Start-Learn-Bridge.bat') '%DIR%Start-Learn-Bridge.bat.new' -Force; exit 0"
   if errorlevel 1 (
     echo [!] Update failed. Check your internet connection, or download the bridge from the website again.
     pause
@@ -67,7 +79,7 @@ if not errorlevel 1 (
   echo Learn 3D bridge is already running on port %PORT%.
   if not defined LEARN3D_NO_BROWSER start "" "%SITE%"
   ping -n 3 127.0.0.1 >nul
-  exit /b 0
+  goto done
 )
 
 if not exist ".venv" (
@@ -93,4 +105,14 @@ echo Learn 3D bridge is running. Log: %CD%\bridge.log
 echo To stop it, close the minimised "Learn 3D Bridge" window.
 if not defined LEARN3D_NO_BROWSER start "" "%SITE%"
 ping -n 4 127.0.0.1 >nul
+
+:done
+rem Swap in the updated starter (see the update step). The move and the exit are in
+rem one parenthesised block, which cmd reads completely before running it.
+if exist "%DIR%Start-Learn-Bridge.bat.new" (
+  move /y "%DIR%Start-Learn-Bridge.bat.new" "%DIR%Start-Learn-Bridge.bat" >nul
+  endlocal
+  exit /b 0
+)
 endlocal
+exit /b 0

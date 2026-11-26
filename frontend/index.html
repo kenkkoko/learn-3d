@@ -52,16 +52,6 @@
       <ul id="roomList" class="room-list"><li class="muted pad">載入中…</li></ul>
     </nav>
     <div class="sidebar-foot">
-      <div class="bridge-status" id="bridgeStatus" role="status" aria-live="polite">
-        <span class="dot" aria-hidden="true"></span><span class="txt">偵測橋接中…</span>
-      </div>
-      <button type="button" class="btn btn-primary wide side-launch" id="sideLaunch" hidden>啟動橋接</button>
-      <div class="bridge-update" id="bridgeUpdate" hidden role="status">
-        <p class="bu-title">橋接有新版本</p>
-        <p class="bu-text" id="bridgeUpdateText">網站更新了，你電腦上的橋接還是舊版，部分功能可能無法使用。</p>
-        <button type="button" class="btn btn-primary wide" id="updateBridgeBtn">一鍵更新橋接</button>
-        <a class="text-btn" href="downloads/learn3d-bridge.zip" download>或手動下載，重新執行 Install-Learn-Bridge.bat</a>
-      </div>
       <details class="ai-settings" id="aiSettings">
         <summary>AI 設定</summary>
         <div class="ai-group" data-role="plan">
@@ -84,35 +74,10 @@
 
   <!-- 中間：學習路徑 + 星雲 -->
   <main class="stage" id="stage">
-    <button type="button" class="bridge-pill" id="bridgePill" data-state="checking" aria-controls="bridgeCard">
-      <span class="dot" aria-hidden="true"></span><span class="txt">本機橋接：偵測中…</span>
-    </button>
-    <section class="bridge-card" id="bridgeCard" hidden aria-labelledby="bridgeCardTitle">
-      <div class="eyebrow">本機橋接</div>
-      <h2 id="bridgeCardTitle">還沒偵測到本機橋接</h2>
-      <p>出題和判定要用你電腦上的 AI（Claude Code / Codex / Ollama），需要在電腦上執行一個小程式「橋接」：</p>
-      <p><b>已經安裝過：</b>直接按「啟動橋接」，瀏覽器第一次會問要不要開啟，按允許。</p>
-      <p><b>第一次使用（Windows）：</b></p>
-      <ol>
-        <li>下載橋接並解壓縮</li>
-        <li>雙擊裡面的 <code>Install-Learn-Bridge.bat</code>（只要一次；沒有 uv 會詢問是否自動安裝，第一次會下載約 400 MB）</li>
-        <li>安裝完會自動啟動；之後都只要按「啟動橋接」</li>
-      </ol>
-      <p class="fineprint">macOS / Linux：解壓縮後在資料夾執行 <code>uv run learn3d-bridge</code>。橋接只監聽你的電腦（127.0.0.1），AI 不能讀寫檔案或執行指令。Chrome 若詢問「存取本機網路」請按允許。</p>
-      <p class="fineprint" id="bridgeCardNote">現在先用示範資料瀏覽。</p>
-      <div class="row">
-        <button type="button" class="btn btn-primary" id="launchBridge">啟動橋接</button>
-        <a class="btn btn-ghost" href="downloads/learn3d-bridge.zip" download>下載橋接</a>
-        <a class="btn btn-ghost" href="http://127.0.0.1:8766/" target="_blank" rel="noopener">開啟本機版</a>
-        <button type="button" class="btn btn-ghost" id="retryBridge">重新偵測</button>
-        <button type="button" class="btn btn-ghost" id="dismissBridgeCard">先看示範</button>
-      </div>
-    </section>
-
     <section class="empty" id="emptyState" hidden>
       <div class="eyebrow">Learn 3D</div>
       <h1>想學什麼？</h1>
-      <p class="lead">輸入一個主題，回答 3–4 個小問題，就會產生你的學習路徑星雲。</p>
+      <p class="lead">輸入一個主題或寫一段描述，回答 3–4 個小問題，就會產生你的學習路徑星雲。</p>
       <button type="button" class="btn btn-primary" data-action="new-topic">＋ 學新主題</button>
     </section>
 
@@ -190,7 +155,63 @@
   <button type="button" class="panel-tab" id="panelTab" aria-controls="panel" aria-expanded="false">問答</button>
   <button type="button" class="side-tab" id="sideTab" aria-controls="sidebar" aria-expanded="false" hidden>主題</button>
   <div class="scrim" id="scrim" hidden></div>
+
+  <!-- 常駐左下角：本機橋接（狀態 + 打開安裝 / 啟動 / 測試面板） -->
+  <button type="button" class="bridge-fab" id="bridgeBtn" data-state="checking" aria-haspopup="dialog" aria-controls="bridgeDialog">
+    <span class="dot" aria-hidden="true"></span>
+    <span class="bf-main"><span class="bf-label">本機橋接</span><span class="bf-txt" id="bridgeBtnText">偵測中…</span></span>
+    <span class="bf-badge" id="bridgeBtnBadge" hidden>有新版</span>
+  </button>
 </div>
+
+<!-- 本機橋接：狀態、啟動、安裝步驟、測試連線、更新 -->
+<dialog class="dlg dlg-wide bridge-dlg" id="bridgeDialog" aria-labelledby="bridgeDlgTitle">
+  <form method="dialog" class="dlg-x"><button class="icon-btn" value="cancel" aria-label="關閉">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></form>
+  <div class="eyebrow">本機橋接</div>
+  <h1 id="bridgeDlgTitle">連接你電腦上的 AI</h1>
+  <div class="bd-status" id="bdStatus" data-state="checking" role="status" aria-live="polite">
+    <span class="dot" aria-hidden="true"></span>
+    <div class="bd-status-main">
+      <b id="bdStatusText">偵測中…</b>
+      <small id="bdStatusSub"></small>
+    </div>
+  </div>
+  <ul class="bd-ai" id="bdAi" hidden></ul>
+
+  <!-- 有新版本 -->
+  <div class="bd-update" id="bdUpdate" hidden>
+    <p class="bu-title">橋接有新版本</p>
+    <p class="bu-text" id="bdUpdateText"></p>
+    <div class="row">
+      <button type="button" class="btn btn-primary" id="updateBridgeBtn">一鍵更新橋接</button>
+      <a class="btn btn-ghost" href="downloads/learn3d-bridge.zip" download>手動下載新版</a>
+    </div>
+  </div>
+
+  <!-- 瀏覽器擋住本機連線 -->
+  <div class="bd-denied" id="bdDenied" hidden>
+    <p><b>橋接已經開著還是連不上？可能是瀏覽器擋住了這個網站連到你的電腦（127.0.0.1）。</b></p>
+    <p>按網址列左邊的圖示 →「網站設定」→ 把「本機網路存取」（Local network access）改成「允許」，回來按「重新偵測」。不想改設定，也可以直接開橋接提供的本機版網頁。</p>
+    <div class="row"><a class="btn btn-ghost" href="http://127.0.0.1:8766/" target="_blank" rel="noopener">開啟本機版（127.0.0.1:8766）</a></div>
+  </div>
+
+  <div class="row bd-actions">
+    <button type="button" class="btn btn-primary" id="launchBridge">已安裝：啟動橋接</button>
+    <button type="button" class="btn btn-ghost" id="testBridge">測試連線</button>
+  </div>
+
+  <div class="bd-install" id="bdInstall">
+    <p class="bd-sub">還沒安裝？（Windows，只要一次）</p>
+    <ol class="bd-steps">
+      <li>先安裝並登入任一個 AI 工具：<a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude Code</a>（建議）、Codex CLI 或 Ollama。</li>
+      <li><a class="bd-dl" href="downloads/learn3d-bridge.zip" download>下載本機橋接（zip）</a>，解壓縮後雙擊 <code>Install-Learn-Bridge.bat</code>。沒有 uv 會詢問是否自動安裝；第一次會下載約 400 MB。</li>
+      <li>安裝完會自動啟動。之後只要按上面的「啟動橋接」（瀏覽器第一次會問要不要開啟連結，選允許；Chrome 問「存取本機網路」也選允許）。</li>
+    </ol>
+    <p class="fineprint">macOS / Linux：解壓縮後在資料夾執行 <code>uv run learn3d-bridge</code>，保持終端機開著。</p>
+    <p class="fineprint">橋接只監聽你的電腦（127.0.0.1），AI 不能讀寫檔案或執行指令；不需要任何 API key。沒連上時網站用示範資料（英文文法）瀏覽。</p>
+  </div>
+</dialog>
 
 <!-- 學新主題 -->
 <dialog class="dlg dlg-wide" id="newTopicDialog" aria-labelledby="newTopicTitle">
@@ -202,7 +223,7 @@
     <form id="ntTopicForm" autocomplete="off">
       <label class="field">
         <span class="field-label">主題</span>
-        <textarea id="ntTopic" maxlength="2000" rows="3" required autofocus placeholder="例如：SQL；或寫一段話：我下個月要考多益，文法常搞混，想加強 Part 5 的詞性和時態…"></textarea>
+        <textarea id="ntTopic" maxlength="2000" rows="3" required autofocus placeholder="例如：英文文法；或寫一段話：我下個月要考多益，文法常搞混，想加強 Part 5 的詞性和時態…（Ctrl + Enter 送出）"></textarea>
       </label>
       <p class="fineprint">接下來會問你 3–4 個問題（目標、程度、生活情境、每次時間），用來量身規劃路徑。</p>
       <div class="form-msg" id="ntMsg1" role="status" aria-live="polite"></div>

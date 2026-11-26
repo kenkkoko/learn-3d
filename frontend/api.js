@@ -111,9 +111,9 @@ async function mockRoute(method, path, body) {
   if (path === "/intake") {
     await wait(600);
     const it = await mockJson("intake");
-    // 示範：英文主題直接當代號（輸入 SQL 可以看到「已存在 → 覆寫確認」流程）
-    const slug = String(body.topic || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    if (/^[a-z0-9-]{2,30}$/.test(slug)) it.topic_slug = slug;
+    // 示範：一律產生英文文法範例；輸入 english-demo 可以看到「已存在 → 覆寫確認」流程
+    const slug = String(body.topic || "").trim().toLowerCase();
+    if (slug === "english-demo") it.topic_slug = slug;
     return it;
   }
   if (path === "/plan") {
