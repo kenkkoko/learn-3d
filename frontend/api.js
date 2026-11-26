@@ -100,8 +100,8 @@ async function mockJson(name) {
 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** 示範資料依主題分檔：英文範例用 *-en.json，SQL 範例用原本的檔名 */
-const mockName = (base, topic) => (topic === "english-demo" ? `${base}-en` : base);
+/** 示範模式只有一個主題：英文文法範例（mock/*-en.json） */
+const mockName = (base) => `${base}-en`;
 
 async function mockRoute(method, path, body) {
   await wait(120);
@@ -122,9 +122,8 @@ async function mockRoute(method, path, body) {
       throw new ApiError("這個主題已經有學習路徑了，要覆寫嗎？", { status: 409, needsConfirm: true });
     }
     await wait(4000);
-    const en = /英|english|toeic|多益/i.test(body.topic || "");
-    const progress = await mockJson(en ? "progress-en" : "progress");
-    return { topic: en ? "english-demo" : "sql-demo", progress };
+    const progress = await mockJson("progress-en");
+    return { topic: "english-demo", progress };
   }
   if (/^\/topics\/[a-z0-9-]+\/journal(\?|$)/.test(path)) {
     const q = new URLSearchParams(path.split("?")[1] || "");
@@ -139,7 +138,7 @@ async function mockRoute(method, path, body) {
     const [, t, sub] = m;
     if (!sub && method === "GET") return mockJson(mockName("progress", t));
     if (!sub && method === "DELETE") return { ok: true };
-    if (sub === "/env") return t === "english-demo" ? { runner: null, sql: null } : mockJson("env");
+    if (sub === "/env") return { runner: null, sql: null };
     if (sub === "/lesson") {
       await wait(2500);                       // 示範也讓人看得到出題進度
       const l = await mockJson(mockName("lesson", t));

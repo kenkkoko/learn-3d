@@ -8,15 +8,6 @@
    "mastered": 2,
    "due": 2,
    "updated": 1795690000.0
-  },
-  {
-   "topic": "sql-demo",
-   "title": "SQL 入門（範例）：用咖啡店訂單學查詢",
-   "domain": "code",
-   "nodes": 25,
-   "mastered": 0,
-   "due": 3,
-   "updated": 1795680000.0
   }
  ]
 }
