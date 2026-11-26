@@ -162,8 +162,65 @@ function renderBridgeUi() {
   $("#bdInstall").hidden = kind === "ok" || isForcedMock();
 }
 
+// ======================================================================
+// AI 訂閱用量（Claude / Codex 的 5 小時、每週額度）
+// 橋接在每次出題／判定時記下 AI 回報的額度狀態；網站每 15 秒、以及每次出題判定後重新讀一次。
+// ======================================================================
+const usageUi = { data: null };
+async function refreshUsage() {
+  if (state.bridge !== "ok" && getMode() !== "mock") return;
+  try { usageUi.data = await api.usage(); } catch { return; }   // 舊版橋接沒有 /usage：安靜略過
+  renderUsage();
+}
+function fmtLeft(sec) {
+  if (sec <= 0) return "即將重置";
+  const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
+  return d ? `${d} 天 ${h} 小時後重置` : h ? `${h} 小時 ${m} 分後重置` : `${Math.max(1, m)} 分後重置`;
+}
+function usageLevel(w) {
+  if (w.status === "rejected" || (w.used_percent ?? 0) >= 100) return "full";
+  if (w.status === "allowed_warning" || (w.used_percent ?? 0) >= 80) return "warn";
+  return "ok";
+}
+function usageText(w) {
+  if (w.used_percent != null) return `${Math.round(w.used_percent)}%`;
+  return w.status === "rejected" ? "已達上限" : w.status === "allowed_warning" ? "接近上限" : "正常";
+}
+function usageBar(w) {
+  const pct = w.used_percent != null ? Math.min(100, Math.max(0, w.used_percent)) : (w.status === "rejected" ? 100 : w.status === "allowed_warning" ? 85 : 0);
+  return h("span", { class: "ub", dataset: { lv: usageLevel(w) }, "aria-hidden": "true" }, h("i", { style: `width:${pct}%` }));
+}
+function renderUsage() {
+  const all = usageUi.data?.providers || {};
+  const now = usageUi.data?.now || Math.floor(Date.now() / 1000);
+  const name = (id) => state.providers.find((p) => p.id === id)?.name || ({ claude: "Claude Code", codex: "Codex CLI" }[id] || id);
+  // 左下角：顯示「日常用 AI」那一家的額度
+  const mine = all[aiChoice("daily").provider];
+  const mini = $("#bridgeUsage");
+  const wins = (mine?.windows || []).slice(0, 2);
+  mini.hidden = state.bridge !== "ok" && getMode() !== "mock" || !wins.length;
+  mini.replaceChildren(...wins.map((w) => h("span", { class: "bu-item", title: `${w.label}額度：${usageText(w)}${w.resets_at ? `，${fmtLeft(w.resets_at - now)}` : ""}` },
+    `${w.label} `, usageBar(w), ` ${usageText(w)}`)));
+  // 面板：每一家的明細
+  const box = $("#bdUsage");
+  const ids = Object.keys(all).filter((id) => (all[id].windows || []).length);
+  box.hidden = !ids.length;
+  if (!ids.length) { box.replaceChildren(); return; }
+  box.replaceChildren(
+    h("p", { class: "bd-sub" }, "訂閱用量"),
+    ...ids.map((id) => h("div", { class: "bu-prov" },
+      h("div", { class: "bu-name" }, name(id),
+        all[id].updated ? h("small", null, ` · ${Math.max(0, Math.round((now - all[id].updated) / 60))} 分鐘前更新`) : null),
+      ...(all[id].windows || []).map((w) => h("div", { class: "bu-row" },
+        h("span", { class: "bu-label" }, w.label), usageBar(w),
+        h("span", { class: "bu-val", dataset: { lv: usageLevel(w) } }, usageText(w)),
+        h("span", { class: "bu-reset" }, w.reset ? "已重置" : w.resets_at ? fmtLeft(w.resets_at - now) : ""))))),
+    h("p", { class: "fineprint" }, "數字來自 AI 工具本身，在每次出題、判定後更新（不會額外花用量）。AI 沒回報百分比時顯示狀態（正常／接近上限／已達上限）。"));
+}
+
 function openBridgeDialog() {
   renderBridgeUi();
+  refreshUsage();
   if (!bridgeDialog.open) bridgeDialog.showModal();
   // 使用者可能剛手動開了橋接：打開面板時順便安靜地重新偵測（還沒授權本機連線時不偷連）
   if (state.bridge !== "ok" && state.bridge !== "checking" && !launching && bridgeUi.perm !== "prompt" && !isForcedMock()) {
@@ -272,6 +329,7 @@ function renderAiSettings() {
       if (ev.target === pSel) { next.model = ""; next.effort = defaultChoice(role).effort; }
       settings.ai[role] = next;
       saveSettings();
+      renderUsage();
       if (ev.target === pSel) renderAiSettings();
     };
     pSel.onchange = mSel.onchange = eSel.onchange = onChange;
@@ -873,6 +931,7 @@ async function startLesson(req = {}, trigger) {
         h("button", { type: "button", class: "btn btn-ghost", onclick: closePanel }, "先到這")));
     return;
   }
+  refreshUsage();
   if (state.topic !== topic) return;
   state.lesson = lesson;
   if (state.progress && lesson.node && state.progress.current !== lesson.node && lesson.kind !== "review") {
@@ -1349,6 +1408,7 @@ async function submitAnswer(l, form, ta, confName, msg, submitBtn, result) {
   }
   setBusy(true, "");
   msg.textContent = "";
+  refreshUsage();
   renderVerdict(l, res, execRes, conf, result);
   applyGrade(l, res, conf);
   if (!res.offtopic && !res.fallback) journal.stale = true;
@@ -1703,6 +1763,7 @@ $("#refreshProviders").addEventListener("click", () => loadProviders(true));
 async function onBridgeReady() {
   state.envCache.clear();
   await Promise.all([loadProviders(), loadTopics()]);
+  refreshUsage();
   showInitialTopic();
 }
 // 「測試連線 / 重新偵測 / 連線到本機橋接」：重新探測橋接，連上後重新偵測 AI 工具
@@ -1867,6 +1928,7 @@ $("#launchBridge").addEventListener("click", launchBridge);
 setInterval(async () => {
   if (document.hidden || launching || isForcedMock()) return;
   if (state.bridge === "ok") {
+    refreshUsage();
     if (!(await probeBridge()).ok) {
       setBridgeStatus("lost", "橋接視窗被關掉了，或電腦睡眠過。按「啟動橋接」重新開啟。");
       toast("本機橋接已中斷：按左下角「本機橋接」重新啟動", true);
@@ -1899,5 +1961,6 @@ function showInitialTopic() {
   if (isForcedMock()) useMock();
   await detectBridge();
   await Promise.all([loadProviders(), loadTopics()]);
+  refreshUsage();
   showInitialTopic();
 })();

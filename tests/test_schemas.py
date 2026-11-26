@@ -293,3 +293,30 @@ def test_claude_login_detection(tmp_path, monkeypatch):
     monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "x")
     (tmp_path / ".credentials.json").unlink()
     assert claude.logged_in() is True
+
+
+def test_usage_records_claude_and_reads_codex(tmp_path, monkeypatch):
+    """Claude 的 RateLimitEvent 會被記下；Codex 從 sessions 紀錄讀 rate_limits；重置時間過了視為已重置。"""
+    import json
+    import time
+    from learn3d import usage
+    monkeypatch.setenv("LEARN3D_DATA", str(tmp_path / "data"))
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path / "codex"))
+    monkeypatch.setattr(usage, "_state", None)
+    future = int(time.time()) + 3600
+    usage.record_claude({"status": "allowed_warning", "rate_limit_type": "five_hour", "utilization": 0.82, "resets_at": future})
+    usage.record_claude({"status": "allowed", "rate_limit_type": "seven_day", "utilization": 0.3, "resets_at": int(time.time()) - 5})
+    d = tmp_path / "codex" / "sessions" / "2026" / "11" / "27"
+    d.mkdir(parents=True)
+    line = {"type": "event_msg", "payload": {"type": "token_count", "rate_limits": {
+        "primary": {"used_percent": 41.0, "window_minutes": 300, "resets_in_seconds": 1200},
+        "secondary": {"used_percent": 12.5, "window_minutes": 10080, "resets_in_seconds": 90000}}}}
+    (d / "rollout-x.jsonl").write_text("{}\n" + json.dumps(line) + "\n", encoding="utf-8")
+    snap = usage.snapshot()["providers"]
+    cw = {w["type"]: w for w in snap["claude"]["windows"]}
+    assert cw["five_hour"]["used_percent"] == 82.0 and cw["five_hour"]["status"] == "allowed_warning"
+    assert cw["seven_day"]["reset"] is True and cw["seven_day"]["used_percent"] == 0.0
+    labels = [w["label"] for w in snap["codex"]["windows"]]
+    assert labels == ["5 小時", "每週"] and snap["codex"]["windows"][0]["used_percent"] == 41.0
+    monkeypatch.setattr(usage, "_state", None)
+    assert "claude" in usage.snapshot()["providers"]  # 存在檔案裡，重開也讀得到

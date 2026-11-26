@@ -107,6 +107,12 @@ async function mockRoute(method, path, body) {
   await wait(120);
   if (path === "/health") return { ok: true, name: "learn3d-bridge", version: "mock" };
   if (path.startsWith("/providers")) return mockJson("providers");
+  if (path === "/usage") {
+    const now = Math.floor(Date.now() / 1000);
+    return { now, providers: { claude: { updated: now - 120, windows: [
+      { type: "five_hour", label: "5 小時", status: "allowed", used_percent: 34, resets_at: now + 2 * 3600 + 780 },
+      { type: "seven_day", label: "每週", status: "allowed", used_percent: 12, resets_at: now + 4 * 86400 } ] } } };
+  }
   if (path === "/topics" && method === "GET") return mockJson("topics");
   if (path === "/intake") {
     await wait(600);
@@ -208,6 +214,7 @@ export const api = {
   health: () => call("GET", "/health"),
   providers: (refresh = false) => call("GET", `/providers${refresh ? "?refresh=1" : ""}`, undefined, { timeout: 20000 }),
   topics: () => call("GET", "/topics"),
+  usage: () => call("GET", "/usage", undefined, { timeout: 8000 }),
   topic: (t) => call("GET", `/topics/${encodeURIComponent(t)}`),
   env: (t) => call("GET", `/topics/${encodeURIComponent(t)}/env`),
   intake: (topic, ai) => call("POST", "/intake", { topic, ai }, { timeout: 120000 }),
