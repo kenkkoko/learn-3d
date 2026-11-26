@@ -1784,12 +1784,22 @@ $("#updateBridgeBtn").addEventListener("click", async (ev) => {
   launching = true;                              // 更新期間心跳不要誤報「中斷」
   window.location.href = "learn3d-bridge://update";
   const want = await expectedBuild();
-  let done = false;
-  for (let i = 0; i < 60 && !done; i++) {      // 最多約 3 分鐘（下載 + 重新安裝套件）
+  const oldBuild = bridgeUi.info?.build;
+  let done = false, wentDown = false, backOld = false;
+  bridgeUi.note = "正在更新：電腦上會跳出一個「Learn 3D Bridge」視窗下載新版，請不要關掉它。";
+  renderBridgeUi();
+  for (let i = 0; i < 40 && !done && !backOld; i++) {      // 最多約 2 分鐘（下載 + 重新安裝套件）
     await new Promise((r) => setTimeout(r, 3000));
     const r = await probeBridge();
+    if (!r.ok) wentDown = true;
     done = r.ok && r.info?.build === want;
+    // 舊橋接停過又回來、版本卻沒變：更新沒成功（較早安裝的橋接，更新流程本身有問題），不用再等
+    backOld = r.ok && wentDown && r.info?.build === oldBuild;
     btn.textContent = `更新中…${(i + 1) * 3} 秒`;
+    if (i === 10 && !done) {
+      bridgeUi.note = "等了 30 秒還沒好：如果電腦上沒有跳出更新視窗，或視窗出現錯誤，請改用「手動下載新版」→ 解壓縮 → 雙擊 Install-Learn-Bridge.bat（只要做一次，之後一鍵更新就正常）。";
+      renderBridgeUi();
+    }
   }
   launching = false;
   btn.disabled = false;
@@ -1800,8 +1810,11 @@ $("#updateBridgeBtn").addEventListener("click", async (ev) => {
     await detectBridge({ userGesture: true });
     await loadProviders(true);
   } else {
-    bridgeUi.note = "更新沒有完成：請按「手動下載新版」，解壓縮後重新執行 Install-Learn-Bridge.bat。";
+    bridgeUi.note = backOld
+      ? "一鍵更新沒有成功（你的橋接是較早安裝的版本，它的更新程式有問題）。請按「手動下載新版」，解壓縮後雙擊 Install-Learn-Bridge.bat 重新安裝一次；之後的一鍵更新就會正常。"
+      : "更新沒有完成：請按「手動下載新版」，解壓縮後雙擊 Install-Learn-Bridge.bat 重新安裝一次（會自動關掉舊橋接再覆蓋）。";
     renderBridgeUi();
+    if ((await probeBridge()).ok) await detectBridge({ userGesture: true });
   }
 });
 
