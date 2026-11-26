@@ -64,7 +64,7 @@ INTAKE_SYSTEM = SYSTEM_BASE + """
 - topic_slug：主題的英文短代號，只能用小寫英數字與連字號，2–30 字（例如 sql、japanese-n5、music-theory）。
 - domain：code（程式語言、SQL、工具指令）／language（自然語言，如英文、日文）／concept（理論、知識）／skill（技能、實作方法，如設計、投資）。
 - questions：id 依序使用 goal（學習目標）、level（目前程度）、context（會在什麼生活或工作情境用到）、minutes（每次想練多久），可省略其中一題但至少 3 題，id 不可重複。
-- 每題 question ≤ 60 字；options 2–4 個，label ≤ 30 字、description ≤ 80 字；選項要具體、貼近這個主題（例如 SQL 的 level 選項：「完全沒碰過」「會寫 SELECT」「會 JOIN 與 GROUP BY」）。
+- 每題 question ≤ 60 字；options 2–4 個，label ≤ 24 字、description ≤ 60 字（寧可短，不要超過）；選項要具體、貼近這個主題（例如 SQL 的 level 選項：「完全沒碰過」「會寫 SELECT」「會 JOIN 與 GROUP BY」）。
 - minutes 題的選項 label 用「10 分鐘」「20 分鐘」這類寫法。
 """
 

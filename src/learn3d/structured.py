@@ -46,6 +46,75 @@ def _log(record: dict) -> None:
         pass
 
 
+def _resolve(node: dict, root: dict) -> dict:
+    ref = node.get("$ref")
+    if isinstance(ref, str) and ref.startswith("#/$defs/"):
+        return root.get("$defs", {}).get(ref.split("/")[-1], node)
+    return node
+
+
+def fit_to_schema(data, node: dict, root: dict | None = None):
+    """把 AI 輸出「剪」進 Schema 的長度限制：字串超過 maxLength 就截斷、陣列超過 maxItems 就只留前面。
+
+    便宜模型最常見的失敗是「多寫了幾個字」（例如選項說明 85 字、上限 80），整份輸出其實是好的。
+    以前這種情況會重試 3 次後整個失敗（使用者看到「暫時無法產生問題」）；現在先修剪再驗證。
+    只處理長度，其他錯誤（缺欄位、型別不對、pattern）照樣交給 Pydantic 判斷並重試。
+    """
+    root = root or node
+    node = _resolve(node, root)
+    if isinstance(data, str):
+        mx = node.get("maxLength")
+        if isinstance(mx, int) and len(data) > mx:
+            return data[: max(1, mx - 1)].rstrip() + "…" if mx > 1 else data[:mx]
+        return data
+    if isinstance(data, list):
+        items = node.get("items")
+        if items is None:
+            for alt in node.get("anyOf", []) or []:
+                alt = _resolve(alt, root)
+                if alt.get("type") == "array":
+                    node, items = alt, alt.get("items")
+                    break
+        mx = node.get("maxItems")
+        if isinstance(mx, int) and len(data) > mx:
+            data = data[:mx]
+        if isinstance(items, dict):
+            return [fit_to_schema(x, items, root) for x in data]
+        return data
+    if isinstance(data, dict):
+        props = node.get("properties")
+        if props is None:
+            alts = node.get("anyOf") or node.get("oneOf") or []
+            disc = (node.get("discriminator") or {}).get("propertyName")
+            for alt in alts:
+                alt = _resolve(alt, root)
+                if alt.get("type") != "object" and "properties" not in alt:
+                    continue
+                if disc:
+                    want = alt.get("properties", {}).get(disc, {}).get("const")
+                    if want is not None and data.get(disc) != want:
+                        continue
+                props = alt.get("properties")
+                break
+        if not props:
+            return data
+        return {k: fit_to_schema(v, props[k], root) if k in props else v for k, v in data.items()}
+    return data
+
+
+def _parse_fitted(model_cls: type[T], raw: str, schema: dict, repair: Callable[[dict], dict] | None) -> T:
+    text = extract_json(raw)
+    try:
+        data = json.loads(text)
+    except ValueError:
+        return model_cls.model_validate_json(text)  # 讓 Pydantic 回報 JSON 格式錯誤
+    if isinstance(data, dict):
+        if repair is not None:
+            data = repair(data)
+        data = fit_to_schema(data, schema)
+    return model_cls.model_validate(data)
+
+
 def summarize_validation_error(e: ValidationError, limit: int = 6) -> str:
     """把 Pydantic 錯誤整理成模型看得懂的短摘要（欄位路徑：原因）。"""
     parts = []
@@ -75,6 +144,7 @@ def call_structured(
     ai: AiChoice,
     max_retries: int = 3,
     extra_check: Callable[[T], str | None] | None = None,
+    repair: Callable[[dict], dict] | None = None,
 ) -> T | None:
     """呼叫 LLM 並回傳通過驗證（含 extra_check）的 model；全部失敗回傳 None。"""
     schema = model_cls.model_json_schema()
@@ -90,7 +160,7 @@ def call_structured(
         give_up = False
         try:
             raw = llm.chat_json(system, prompt, schema, model=ai.model, effort=ai.effort)
-            result = model_cls.model_validate_json(extract_json(raw))
+            result = _parse_fitted(model_cls, raw, schema, repair)
             if extra_check is not None:
                 error = extra_check(result)
                 if error:

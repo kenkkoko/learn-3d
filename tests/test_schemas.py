@@ -51,7 +51,7 @@ def test_intake_question_count():
 
 def test_intake_option_label_too_long():
     d = intake_dict()
-    d["questions"][0]["options"][0]["label"] = "長" * 31
+    d["questions"][0]["options"][0]["label"] = "長" * 41
     with pytest.raises(ValidationError):
         Intake.model_validate(d)
 
@@ -247,3 +247,21 @@ def test_provider_error_is_surfaced_not_swallowed():
     with pytest.raises(ProviderError, match="登入"):
         call_structured(NoLogin(), Intake, "s", "u", task="intake", ai=AiChoice(provider="fake"))
     assert NoLogin.calls == 1  # 不可重試的錯誤不重試
+
+
+def test_intake_slightly_too_long_is_trimmed_not_failed():
+    """便宜模型多寫幾個字、slug 有大寫或空白：修剪後通過，不要重試三次後失敗。"""
+    import json
+    from learn3d.providers.fake import FakeLLM
+    from learn3d.schemas import AiChoice
+    from learn3d.tasks import run_intake
+
+    opt = {"label": "多益" * 30, "description": "說明" * 100}
+    raw = {"topic_slug": "English Grammar & Speaking!!", "domain": "language", "questions": [
+        {"id": qid, "question": "問題" * 60, "options": [opt, opt, opt, opt, opt]}
+        for qid in ("goal", "level", "context", "minutes", "goal")]}
+    llm = FakeLLM(scripted=[json.dumps(raw, ensure_ascii=False)])
+    it = run_intake(llm, AiChoice(provider="fake"), "英文")
+    assert it is not None and len(llm.calls) == 1
+    assert it.topic_slug == "english-grammar-speaking"
+    assert len(it.questions) == 4 and all(len(q.options) == 4 for q in it.questions)

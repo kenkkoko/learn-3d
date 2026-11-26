@@ -28,13 +28,13 @@ class _Strict(BaseModel):
 
 # ---------- LLM 輸出：Intake ----------
 class IntakeOption(_Strict):
-    label: str = Field(min_length=1, max_length=30)
-    description: str = Field(max_length=80)
+    label: str = Field(min_length=1, max_length=40)
+    description: str = Field(max_length=120)
 
 
 class IntakeQuestion(_Strict):
     id: Literal["goal", "level", "context", "minutes"]
-    question: str = Field(min_length=1, max_length=60)
+    question: str = Field(min_length=1, max_length=80)
     options: list[IntakeOption] = Field(min_length=2, max_length=4)
 
 

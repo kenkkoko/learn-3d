@@ -183,9 +183,36 @@ def _grade_check(ctx: GradeContext):
 # ---------------------------------------------------------------------------
 
 
+def repair_intake(data: dict) -> dict:
+    """修正 intake 輸出裡「意思對、格式差一點」的地方，不用為了這種小事重試。
+
+    - topic_slug：轉小寫、非英數字換成連字號、截到 30 字；修不好就用 topic
+    - questions：id 重複或不認得的丟掉，最多留 4 題；每題選項最多 4 個
+    """
+    import re as _re
+    out = dict(data)
+    slug = _re.sub(r"[^a-z0-9]+", "-", str(out.get("topic_slug") or "").lower()).strip("-")[:30].strip("-")
+    out["topic_slug"] = slug if len(slug) >= 2 else "topic"
+    seen: set[str] = set()
+    qs = []
+    for q in out.get("questions") or []:
+        if not isinstance(q, dict):
+            continue
+        qid = q.get("id")
+        if qid not in ("goal", "level", "context", "minutes") or qid in seen:
+            continue
+        seen.add(qid)
+        if isinstance(q.get("options"), list):
+            q = {**q, "options": [o for o in q["options"] if isinstance(o, dict)][:4]}
+        qs.append(q)
+    if qs:
+        out["questions"] = qs[:4]
+    return out
+
+
 def run_intake(llm: LLMProvider, ai: AiChoice, topic: str) -> Intake | None:
     system, user = prompts.intake_prompt(topic)
-    return call_structured(llm, Intake, system, user, task="intake", ai=ai)
+    return call_structured(llm, Intake, system, user, task="intake", ai=ai, repair=repair_intake)
 
 
 def run_plan(llm: LLMProvider, ai: AiChoice, req: PlanRequest) -> LearningMap | None:
