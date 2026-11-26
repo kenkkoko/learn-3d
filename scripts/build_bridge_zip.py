@@ -27,6 +27,7 @@ def files() -> list[tuple[str, Path]]:
         (".python-version", ROOT / ".python-version"),
         ("README.md", ROOT / "README.md"),  # pyproject 的 readme 欄位需要
         ("README.txt", ROOT / "windows" / "README.txt"),
+        ("Install-Learn-Bridge.bat", ROOT / "windows" / "Install-Learn-Bridge.bat"),
         ("Start-Learn-Bridge.bat", ROOT / "windows" / "Start-Learn-Bridge.bat"),
     ]
     pkg = ROOT / "src" / "learn3d"

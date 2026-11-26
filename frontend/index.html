@@ -81,16 +81,18 @@
       <div class="eyebrow">本機橋接</div>
       <h2 id="bridgeCardTitle">還沒偵測到本機橋接</h2>
       <p>出題和判定要用你電腦上的 AI（Claude Code / Codex / Ollama），需要在電腦上執行一個小程式「橋接」：</p>
+      <p><b>已經安裝過：</b>直接按「啟動橋接」，瀏覽器第一次會問要不要開啟，按允許。</p>
+      <p><b>第一次使用（Windows）：</b></p>
       <ol>
-        <li>安裝 uv（只要一次）：開啟 PowerShell 貼上
-          <code class="copy-line">powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"</code></li>
-        <li>下載橋接並解壓縮，雙擊裡面的 <code>Start-Learn-Bridge.bat</code>（第一次會下載約 400 MB，需要幾分鐘）</li>
-        <li>回到這裡按「重新偵測」；Chrome 若詢問「存取本機網路」請按允許</li>
+        <li>下載橋接並解壓縮</li>
+        <li>雙擊裡面的 <code>Install-Learn-Bridge.bat</code>（只要一次；沒有 uv 會詢問是否自動安裝，第一次會下載約 400 MB）</li>
+        <li>安裝完會自動啟動；之後都只要按「啟動橋接」</li>
       </ol>
-      <p class="fineprint">macOS / Linux：解壓縮後在資料夾執行 <code>uv run learn3d-bridge</code>。橋接只監聽你的電腦（127.0.0.1），AI 不能讀寫檔案或執行指令。</p>
-      <p class="fineprint" id="bridgeCardNote">現在先用示範資料瀏覽；啟動後按「重新偵測」。</p>
+      <p class="fineprint">macOS / Linux：解壓縮後在資料夾執行 <code>uv run learn3d-bridge</code>。橋接只監聽你的電腦（127.0.0.1），AI 不能讀寫檔案或執行指令。Chrome 若詢問「存取本機網路」請按允許。</p>
+      <p class="fineprint" id="bridgeCardNote">現在先用示範資料瀏覽。</p>
       <div class="row">
-        <a class="btn btn-primary" href="downloads/learn3d-bridge.zip" download>下載橋接（Windows / macOS / Linux）</a>
+        <button type="button" class="btn btn-primary" id="launchBridge">啟動橋接</button>
+        <a class="btn btn-ghost" href="downloads/learn3d-bridge.zip" download>下載橋接</a>
         <button type="button" class="btn btn-ghost" id="retryBridge">重新偵測</button>
         <button type="button" class="btn btn-ghost" id="dismissBridgeCard">先看示範</button>
       </div>

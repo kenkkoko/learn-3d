@@ -20,7 +20,7 @@
 
 需要：[uv](https://docs.astral.sh/uv/)，以及下列任一個 AI 工具（已登入）：Claude Code、Codex CLI、Ollama。
 
-**一般使用者（不用 git）**：在 <https://learn.hellokai07.com> 按「下載橋接」，解壓縮後雙擊 `Start-Learn-Bridge.bat`。第一次會下載 Python 與 Claude Agent SDK（約 400 MB），之後橋接在背景執行並自動開啟網站。
+**一般使用者（不用 git）**：在 <https://learn.hellokai07.com> 按「下載橋接」，解壓縮後雙擊 `Install-Learn-Bridge.bat`（只要一次，會註冊 `learn3d-bridge://` 連結；第一次下載約 400 MB）。之後在網站按「啟動橋接」就會自動打開。
 
 **開發者**：
 

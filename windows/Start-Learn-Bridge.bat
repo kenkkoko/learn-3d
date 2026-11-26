@@ -6,6 +6,8 @@ setlocal
 title Learn 3D Bridge
 if "%LEARN3D_PORT%"=="" (set "PORT=8766") else (set "PORT=%LEARN3D_PORT%")
 set "SITE=https://learn.hellokai07.com"
+rem Opened from the website's learn3d-bridge:// link: the site is already open, don't open it again.
+if not "%~1"=="" set "LEARN3D_NO_BROWSER=1"
 
 rem -- already running? ------------------------------------------------------
 powershell -NoProfile -Command "try { Invoke-WebRequest -UseBasicParsing http://127.0.0.1:%PORT%/health -TimeoutSec 2 | Out-Null; exit 0 } catch { exit 1 }" >nul 2>nul
@@ -20,6 +22,7 @@ rem -- find pyproject.toml: zip folder (next to this file) or the repo -------
 set "DIR="
 if exist "%~dp0pyproject.toml" set "DIR=%~dp0"
 if not defined DIR if exist "%~dp0..\pyproject.toml" set "DIR=%~dp0..\"
+if not defined DIR if exist "%LOCALAPPDATA%\Learn3D\bridge\pyproject.toml" set "DIR=%LOCALAPPDATA%\Learn3D\bridge\"
 if not defined DIR (
   echo [!] pyproject.toml not found next to this file.
   echo     Unzip learn3d-bridge.zip first, then double-click Start-Learn-Bridge.bat inside it.

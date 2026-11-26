@@ -1513,15 +1513,33 @@ $("#openPanelMobile").addEventListener("click", (ev) => openPanel(ev.currentTarg
 $("#scrim").addEventListener("click", closeDrawer);
 $("#refreshProviders").addEventListener("click", () => loadProviders(true));
 $("#dismissBridgeCard").addEventListener("click", () => { $("#bridgeCard").hidden = true; });
+async function onBridgeReady() {
+  state.envCache.clear();
+  await Promise.all([loadProviders(), loadTopics()]);
+  showInitialTopic();
+}
 $("#retryBridge").addEventListener("click", async () => {
   await detectBridge({ userGesture: true });
-  if (state.bridge === "ok") {
-    state.envCache.clear();
-    await Promise.all([loadProviders(), loadTopics()]);
-    showInitialTopic();
-  } else {
-    toast("還是偵測不到橋接，請確認已啟動", true);
+  if (state.bridge === "ok") await onBridgeReady();
+  else toast("還是偵測不到橋接，請確認已啟動", true);
+});
+
+// 「啟動橋接」：透過安裝時註冊的 learn3d-bridge:// 連結打開本機橋接，再等它回應
+$("#launchBridge").addEventListener("click", async (ev) => {
+  const btn = ev.currentTarget;
+  btn.disabled = true;
+  const label = btn.textContent;
+  btn.textContent = "啟動中…";
+  window.location.href = "learn3d-bridge://start";
+  for (let i = 0; i < 40; i++) {             // 最多約 2 分鐘（剛安裝完第一次會比較久）
+    await new Promise((r) => setTimeout(r, 3000));
+    await detectBridge({ userGesture: true });
+    if (state.bridge === "ok") break;
   }
+  btn.disabled = false;
+  btn.textContent = label;
+  if (state.bridge === "ok") await onBridgeReady();
+  else toast("沒有偵測到橋接：第一次使用請先下載並執行 Install-Learn-Bridge.bat", true);
 });
 
 function showInitialTopic() {

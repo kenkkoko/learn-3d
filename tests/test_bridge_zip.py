@@ -25,7 +25,7 @@ def test_committed_zip_is_up_to_date(tmp_path):
 def test_zip_contents():
     names = zipfile.ZipFile(ZIP).namelist()
     assert all(n.startswith("learn3d-bridge/") for n in names)
-    for must in ("pyproject.toml", "uv.lock", "Start-Learn-Bridge.bat", "README.txt",
+    for must in ("pyproject.toml", "uv.lock", "Start-Learn-Bridge.bat", "Install-Learn-Bridge.bat", "README.txt",
                  "src/learn3d/api.py", "src/learn3d/data/injection_patterns.txt"):
         assert "learn3d-bridge/" + must in names, must
     assert not any("/tests/" in n or ".venv" in n or "__pycache__" in n or "progress.json" in n for n in names)
