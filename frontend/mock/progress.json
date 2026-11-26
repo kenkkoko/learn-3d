@@ -1,18 +1,18 @@
 {
  "version": 1,
- "topic": "sql",
- "title": "SQL：用工廠 ERP／MES 資料備戰筆試與到職",
+ "topic": "sql-demo",
+ "title": "SQL 入門（範例）：用咖啡店訂單學查詢",
  "domain": "code",
  "runner": "sql",
  "created": "2026-11-26",
  "learner": {
-  "goal": "準備 ERP／資訊工程職缺的手寫 SQL 筆試，以及到職後用 SQL Agent、RAG 串接資料庫",
-  "level": "完全沒碰過 SQL",
-  "context": "電子廠 ERP / MES：料號、供應商、採購單、工單良率、員工主管",
-  "minutes": 30,
-  "notes": "筆試是手寫：produce 題要求先不靠執行手寫完整語法，逗號、單引號、GROUP BY 欄位等語法細節要算分；職場用 Oracle 與 MS SQL，講解時順帶一句方言差異；每次可連續練 4–6 題；【零基礎】新名詞先用白話解釋，一次只講一小段程式，逐字翻成中文；不丟整段看不懂的程式碼；少用抽象比喻，用表格或具體例子。"
+  "goal": "看懂並寫出基本查詢，自己整理店裡的訂單報表",
+  "level": "看得懂一點點 SELECT",
+  "context": "咖啡店：顧客、商品、訂單",
+  "minutes": 15,
+  "notes": "新名詞先用白話解釋；一次只講一小段程式，逐段翻成中文；題目用到的資料表要附上"
  },
- "envNote": "practice.db（SQLite）：suppliers(supplier_id,name,city,rating 可能 NULL；8 新創模具 沒被採購過)、materials(material_id 料號,name,category 原料/化學品/零件/包材,unit,unit_cost,supplier_id 有 NULL 與不存在的 99,safety_stock,stock_qty 有 NULL)、purchase_orders(po_id,material_id,supplier_id,qty,unit_price 有 NULL,order_date,due_date,received_date NULL=未到貨,status 開立/部分到貨/結案/取消；2026-09~11 共 24 筆)、work_orders(wo_id,product,line L1~L3,plan_qty,good_qty,ng_qty 未完工為 NULL,start_date,end_date,status 生產中/完工/暫停)、employees(emp_id,name,dept 資訊處/採購/生管/品保/製造,title,manager_id 自我參照,hire_date,salary 有同薪與 NULL)",
+ "envNote": "practice.db（SQLite）：customers(customer_id,name,city,member_level 金卡/銀卡，NULL＝還不是會員；8 劉欣怡 從沒下過單)、products(product_id,name,category 咖啡/茶飲/甜點,price；8 季節限定 沒有分類與價格)、orders(order_id,customer_id 有不存在的 99,product_id,qty,order_date 2026-10,status 完成/取消)",
  "current": "where-basic",
  "nodes": [
   {
@@ -227,7 +227,7 @@
    "prereqs": [
     "where-basic"
    ],
-   "summary": "能做字串串接、擷取、日期比較與日期區間篩選（例如某個月的採購單）",
+   "summary": "能做字串串接、擷取、日期比較與日期區間篩選（例如十月上半月的訂單）",
    "pitfalls": [
     "日期區間的結束日沒算進去（< 與 <= 搞混）",
     "把日期當數字比大小卻格式不一致",
@@ -283,7 +283,7 @@
    "prereqs": [
     "aggregate"
    ],
-   "summary": "能依某欄位分組算統計，例如每個供應商的採購金額",
+   "summary": "能依某欄位分組算統計，例如每位顧客的消費金額",
    "pitfalls": [
     "SELECT 裡出現沒放進 GROUP BY、也沒被聚合的欄位",
     "以為 GROUP BY 會自動排序",
@@ -321,7 +321,7 @@
     "inner-join",
     "null-handling"
    ],
-   "summary": "能用 LEFT JOIN 保留左表全部資料，並用 IS NULL 找出「從沒下過單的供應商」",
+   "summary": "能用 LEFT JOIN 保留左表全部資料，並用 IS NULL 找出「從沒下過單的顧客」",
    "pitfalls": [
     "以為 LEFT JOIN 會刪掉對不到的列",
     "把右表條件寫在 WHERE，結果變回 INNER JOIN",
@@ -339,11 +339,11 @@
    "prereqs": [
     "inner-join"
    ],
-   "summary": "能把同一張表 JOIN 自己，例如列出每個員工和他的主管姓名",
+   "summary": "能把同一張表 JOIN 自己，例如列出每位店員和他的店長",
    "pitfalls": [
     "同一張表沒取兩個不同的別名",
-    "ON 條件方向寫反（主管 id 對到員工 id）",
-    "用 INNER JOIN 把沒有主管的最高主管漏掉"
+    "ON 條件方向寫反（店長 id 對到店員 id）",
+    "用 INNER JOIN 把沒有店長的人漏掉"
    ],
    "status": "unseen",
    "score": 0,
@@ -358,7 +358,7 @@
     "aggregate",
     "logic-ops"
    ],
-   "summary": "能在 WHERE 或 FROM 裡放子查詢，例如找出單價高於平均的料號",
+   "summary": "能在 WHERE 或 FROM 裡放子查詢，例如找出價格高於平均的商品",
    "pitfalls": [
     "子查詢回傳多列卻用 = 比較",
     "忘了幫 FROM 裡的子查詢取別名",
@@ -376,7 +376,7 @@
    "prereqs": [
     "dml"
    ],
-   "summary": "能說明 BEGIN / COMMIT / ROLLBACK 的用途，以及為什麼扣庫存和建單要放同一個交易",
+   "summary": "能說明 BEGIN / COMMIT / ROLLBACK 的用途，以及為什麼扣庫存和建立訂單要放同一個交易",
    "pitfalls": [
     "以為 DELETE 之後還能自動復原",
     "分不清 COMMIT 和 ROLLBACK 的時機",
@@ -414,7 +414,7 @@
    "prereqs": [
     "group-by"
    ],
-   "summary": "能用 HAVING 篩出符合條件的組，例如採購超過 3 次的料號",
+   "summary": "能用 HAVING 篩出符合條件的組，例如下單超過 2 次的顧客",
    "pitfalls": [
     "把聚合條件寫在 WHERE（WHERE 不能放 SUM/COUNT）",
     "分不清 WHERE 篩列、HAVING 篩組",
@@ -451,7 +451,7 @@
    "prereqs": [
     "subquery"
    ],
-   "summary": "能用 WITH 把多步驟查詢拆成好讀的區塊，例如先算每月採購額再比較",
+   "summary": "能用 WITH 把多步驟查詢拆成好讀的區塊，例如先算每天營收再比較",
    "pitfalls": [
     "多個 CTE 之間用 WITH 重複開頭（要用逗號）",
     "CTE 最後忘了接主查詢",
@@ -502,15 +502,15 @@
   },
   {
    "id": "top-n",
-   "name": "面試經典題：第 N 高、每組前幾名、找重複",
+   "name": "經典題型：第 N 高、每組前幾名、找重複",
    "layer": 7,
    "prereqs": [
     "window-funcs",
     "subquery"
    ],
-   "summary": "能手寫第二高薪資、每個部門最高薪的人、找出重複資料這類筆試常考題",
+   "summary": "能寫出第二貴的商品、每個分類最貴的商品、找出重複資料這類常見題",
    "pitfalls": [
-    "第二高薪用 LIMIT 1 OFFSET 1 卻沒處理同薪",
+    "第二貴用 LIMIT 1 OFFSET 1 卻沒處理同價",
     "每組最高只用 GROUP BY + MAX 拿不到同一列的其他欄位",
     "找重複忘了 HAVING COUNT(*) > 1"
    ],
@@ -544,12 +544,12 @@
    "id": "m1",
    "node": "where-basic",
    "label": "以為 NULL（空白）也會被 <> 選到",
-   "wrong": "空白沒有 A，所以 rating <> 'A' 會選到空白的列",
-   "right": "NULL 不會被 =、<> 這類比較選到；要找空白要用 IS NULL",
+   "wrong": "空白不是金卡，所以 member_level <> '金卡' 會選到空白的顧客",
+   "right": "NULL 不會被 =、<> 選到；要找空白用 IS NULL",
    "scenarios": [
-    "supplier 評等 <> 'A'"
+    "顧客會員等級 <> '金卡'"
    ],
-   "created": "2026-11-26",
+   "created": "2026-11-25",
    "interval": 1,
    "nextReview": "2026-11-26",
    "hits": 1,
@@ -559,12 +559,12 @@
    "id": "m2",
    "node": "where-basic",
    "label": "把 IS NULL 寫成字串或加上 =",
-   "wrong": "WHERE rating = 'IS NULL'",
-   "right": "空白要直接寫 WHERE rating IS NULL，不加引號、不加 =",
+   "wrong": "WHERE member_level = 'IS NULL'",
+   "right": "直接寫 WHERE member_level IS NULL，不加引號、不加 =",
    "scenarios": [
-    "supplier 評等空白"
+    "還不是會員的顧客"
    ],
-   "created": "2026-11-26",
+   "created": "2026-11-25",
    "interval": 1,
    "nextReview": "2026-11-26",
    "hits": 1,
@@ -573,13 +573,13 @@
   {
    "id": "m3",
    "node": "where-basic",
-   "label": "AND 與 OR 搞混，且條件只寫值沒寫欄位",
-   "wrong": "WHERE city = '桃園' AND 'B'",
-   "right": "「或」用 OR，每個條件都要寫欄位：WHERE city = '桃園' OR rating = 'B'",
+   "label": "AND 與 OR 搞混",
+   "wrong": "WHERE city = '台北' AND member_level = '金卡' 當成「台北或金卡」",
+   "right": "「或」要用 OR，AND 是兩個條件都要符合",
    "scenarios": [
-    "supplier 城市或評等"
+    "台北或金卡的顧客"
    ],
-   "created": "2026-11-26",
+   "created": "2026-11-25",
    "interval": 1,
    "nextReview": "2026-11-26",
    "hits": 1,

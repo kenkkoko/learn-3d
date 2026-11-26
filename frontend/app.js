@@ -94,6 +94,8 @@ function setBridgeStatus(kind, text) {
   el.dataset.state = kind;
   $(".txt", el).textContent = text;
   $("#mockBadge").hidden = getMode() !== "mock";
+  // 沒連上橋接時，左下角一直有「啟動橋接」
+  $("#sideLaunch").hidden = !(kind === "off" || kind === "lost");
 }
 
 function showBridgeCard(variant) {
@@ -1524,23 +1526,49 @@ $("#retryBridge").addEventListener("click", async () => {
   else toast("還是偵測不到橋接，請確認已啟動", true);
 });
 
-// 「啟動橋接」：透過安裝時註冊的 learn3d-bridge:// 連結打開本機橋接，再等它回應
-$("#launchBridge").addEventListener("click", async (ev) => {
-  const btn = ev.currentTarget;
-  btn.disabled = true;
-  const label = btn.textContent;
-  btn.textContent = "啟動中…";
+// 「啟動橋接」：透過安裝時註冊的 learn3d-bridge:// 連結打開本機橋接，再等它回應。
+// 瀏覽器不能直接啟動電腦裡的程式，所以第一次要先執行安裝檔註冊這個連結（SmartDCA 同樣做法）。
+let launching = false;
+async function launchBridge(btn) {
+  if (launching) return;
+  launching = true;
+  const buttons = [$("#launchBridge"), $("#sideLaunch")];
+  buttons.forEach((b) => { b.disabled = true; b.dataset.label ??= b.textContent; b.textContent = "啟動中…"; });
   window.location.href = "learn3d-bridge://start";
-  for (let i = 0; i < 40; i++) {             // 最多約 2 分鐘（剛安裝完第一次會比較久）
+  let ok = false;
+  for (let i = 0; i < 40 && !ok; i++) {      // 最多約 2 分鐘（剛安裝完第一次會比較久）
     await new Promise((r) => setTimeout(r, 3000));
-    await detectBridge({ userGesture: true });
-    if (state.bridge === "ok") break;
+    ok = (await probeBridge()).ok;
+    if (i === 3 && !ok) {
+      // 約 12 秒還沒反應：多半是還沒安裝，直接把安裝步驟秀出來
+      showBridgeCard("off");
+      toast("還沒反應？第一次使用請先下載並執行 Install-Learn-Bridge.bat（只要一次）", true);
+    }
   }
-  btn.disabled = false;
-  btn.textContent = label;
-  if (state.bridge === "ok") await onBridgeReady();
-  else toast("沒有偵測到橋接：第一次使用請先下載並執行 Install-Learn-Bridge.bat", true);
-});
+  buttons.forEach((b) => { b.disabled = false; b.textContent = b.dataset.label; });
+  launching = false;
+  if (ok) { await detectBridge({ userGesture: true }); await onBridgeReady(); }
+}
+$("#launchBridge").addEventListener("click", (ev) => launchBridge(ev.currentTarget));
+$("#sideLaunch").addEventListener("click", (ev) => launchBridge(ev.currentTarget));
+
+// 心跳：每 10 秒確認橋接還在。關掉橋接 → 紅燈 + 啟動按鈕；自己開回來 → 自動接上
+setInterval(async () => {
+  if (document.hidden || launching || isForcedMock()) return;
+  if (state.bridge === "ok") {
+    if (!(await probeBridge()).ok) {
+      setBridgeStatus("lost", "橋接已中斷：按「啟動橋接」重新開啟");
+      toast("本機橋接已中斷", true);
+    }
+  } else if (state.bridge === "off" || state.bridge === "lost") {
+    if ((await loopbackPermission()) === "prompt") return;   // 還沒授權本機連線時不偷偷連
+    if ((await probeBridge()).ok) {
+      const wasMock = getMode() === "mock";
+      await detectBridge({ userGesture: true });
+      if (state.bridge === "ok") { toast("已連上本機橋接"); if (wasMock) await onBridgeReady(); else await loadProviders(); }
+    }
+  }
+}, 10000);
 
 function showInitialTopic() {
   const want = decodeURIComponent(location.hash.slice(1));

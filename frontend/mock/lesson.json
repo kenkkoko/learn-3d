@@ -4,22 +4,26 @@
  "node_name": "WHERE 篩選",
  "kind": "new",
  "type": "produce",
- "lecture": "WHERE 就像 Excel 的「篩選」：只留下符合條件的那幾列。\n\n新名詞：\n・條件：一句會得到「是 / 不是」的比較，例如 city = '桃園'（城市是桃園）。\n・NULL：表格裡的「空白」，代表「還不知道」。它不是空字串，也不是 0。\n\n重點：拿 NULL 去比較（=、<>）時，答案既不是「是」也不是「不是」，而是「不知道」，所以那一列不會被選出來。要找空白，得寫 IS NULL。",
- "example": "SELECT name, city\nFROM suppliers\nWHERE city = '桃園';",
+ "lecture": "WHERE 就像在一疊訂單裡只挑出符合條件的那幾張。它一列一列檢查，符合的整列留下來。要注意「空白」（NULL）的意思是「不知道、沒填」，它跟任何值比較都不算符合，所以要找空白得另外用 IS NULL。",
+ "example": "SELECT name, city\nFROM customers\nWHERE city = '台北';",
  "example_explain": [
-  "SELECT name, city —— 我要看「名稱」和「城市」這兩欄。",
-  "FROM suppliers —— 資料從「供應商」這張表拿。",
-  "WHERE city = '桃園' —— 只留下城市等於「桃園」的那幾列；字串要用單引號包起來。",
-  "最後的分號 ; —— 代表這句 SQL 寫完了。"
+  "SELECT name, city：我要看「名字」和「城市」兩欄",
+  "FROM customers：資料來自顧客表",
+  "WHERE city = '台北'：只留下城市是台北的列（文字要用單引號）"
  ],
- "question": "採購主管想找「評等不是 A」的供應商，連「還沒評鑑」（rating 是空白）的也要一起列出來。請寫一句 SQL，列出這些供應商的 supplier_id、name、rating。",
- "hint": "rating <> 'A' 不會選到空白的那幾列，空白要另外用 IS NULL 補上，兩個條件用 OR 接起來。",
- "show_tables": ["suppliers"],
+ "question": "店長想找「會員等級不是金卡」的顧客，連「還不是會員」（member_level 是空白）的也要一起列出來。請寫一句 SQL，列出這些顧客的 name 和 member_level。",
+ "hint": "<> '金卡' 不會選到空白，空白要用 IS NULL 另外補上，兩個條件用 OR 連起來。",
+ "show_tables": [
+  "customers"
+ ],
  "visuals": [
-  {"kind": "diagram", "title": "一列資料怎麼通過 WHERE", "mermaid": "flowchart LR\n  A[一列供應商] --> B{rating 是空白嗎？}\n  B -- 是 --> C[rating <> 'A' 得到「不知道」<br/>這列被丟掉]\n  B -- 否 --> D{rating 等於 A 嗎？}\n  D -- 是 --> E[丟掉]\n  D -- 否 --> F[留下]\n  C -.加上 OR rating IS NULL.-> F"},
-  {"kind": "table", "title": "拿 rating 跟 'A' 比較的三種結果", "columns": ["rating 的值", "rating <> 'A'", "會被選出來嗎"], "rows": [["A", "不是（FALSE）", "不會"], ["B", "是（TRUE）", "會"], ["（空白）", "不知道（UNKNOWN）", "不會"]]}
+  {
+   "kind": "diagram",
+   "title": "WHERE 怎麼篩選",
+   "mermaid": "flowchart LR\n  A[每一位顧客] --> B{member_level 不是金卡?}\n  B -- 是 --> K[留下]\n  B -- 空白 NULL --> C{member_level IS NULL?}\n  C -- 是 --> K\n  B -- 是金卡 --> X[不留]"
+  }
  ],
- "ref_code": "SELECT supplier_id, name, rating\nFROM suppliers\nWHERE rating <> 'A' OR rating IS NULL;",
+ "ref_code": "SELECT name, member_level\nFROM customers\nWHERE member_level <> '金卡' OR member_level IS NULL;",
  "runner": "sql",
  "cached_lecture": false
 }

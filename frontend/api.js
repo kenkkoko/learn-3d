@@ -120,7 +120,7 @@ async function mockRoute(method, path, body) {
     }
     await wait(1800);
     const progress = await mockJson("progress");
-    return { topic: "sql", progress };
+    return { topic: "sql-demo", progress };
   }
   if (/^\/topics\/[a-z0-9-]+\/journal(\?|$)/.test(path)) {
     const q = new URLSearchParams(path.split("?")[1] || "");

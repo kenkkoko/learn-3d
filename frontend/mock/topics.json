@@ -1,8 +1,8 @@
 {
  "topics": [
   {
-   "topic": "sql",
-   "title": "SQL：用工廠 ERP／MES 資料備戰筆試與到職",
+   "topic": "sql-demo",
+   "title": "SQL 入門（範例）：用咖啡店訂單學查詢",
    "domain": "code",
    "nodes": 25,
    "mastered": 0,
