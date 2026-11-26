@@ -277,3 +277,19 @@ def test_failure_reason_is_recorded():
     llm = FakeLLM(scripted=["不是 JSON"] * 3)
     assert run_intake(llm, AiChoice(provider="fake", model="m1"), "英文") is None
     assert "m1" in last_failure() and last_failure()
+
+
+def test_claude_login_detection(tmp_path, monkeypatch):
+    """沒有登入檔也沒有金鑰環境變數 → 未登入；有 .credentials.json → 已登入。"""
+    import sys
+    from learn3d.providers import claude
+    for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setattr(sys, "platform", "win32")
+    assert claude.logged_in() is False
+    (tmp_path / ".credentials.json").write_text("{}")
+    assert claude.logged_in() is True
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "x")
+    (tmp_path / ".credentials.json").unlink()
+    assert claude.logged_in() is True

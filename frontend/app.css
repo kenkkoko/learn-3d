@@ -590,3 +590,8 @@ select option { background: #141418; }
   .toast { bottom: 72px; }               /* 不要蓋住左下角的「本機橋接」按鈕 */
   .list-view { padding-bottom: 84px; }   /* 清單最後幾個節點不會被按鈕擋住 */
 }
+
+.bd-ai li.login { flex-wrap: wrap; color: var(--text); }
+.bd-ai li.login::before { color: var(--warn); }
+.bd-ai li.login small { color: var(--muted); }
+.bd-login { margin: 4px 0 4px 17px; }

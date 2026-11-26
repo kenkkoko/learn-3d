@@ -144,6 +144,7 @@ class ProviderInfo(_Strict):
     reason: str | None = None
     models: list[str] = Field(default_factory=list)
     efforts: list[Effort] = Field(default_factory=list)
+    needs_login: bool = False  # 裝好了但還沒登入（目前只有 Claude Code 偵測得到）：網站顯示「登入 Claude Code」按鈕
 
 
 class ProvidersResponse(_Strict):

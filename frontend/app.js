@@ -103,7 +103,8 @@ function setBridgeStatus(kind, note = "") {
 function renderBridgeUi() {
   const kind = state.bridge;
   const avail = state.providers.filter((p) => p.available).map((p) => p.name);
-  const short = kind === "ok" ? (avail.length ? `已連線 · ${avail.join("、")}` : "已連線 · 沒有可用的 AI 工具")
+  const needLogin = state.providers.find((p) => p.needs_login);
+  const short = kind === "ok" ? (avail.length ? `已連線 · ${avail.join("、")}` : needLogin ? `已連線 · ${needLogin.name} 還沒登入` : "已連線 · 沒有可用的 AI 工具")
     : kind === "checking" ? "偵測中…"
     : kind === "mock" ? "示範模式（?mock=1）"
     : kind === "lost" ? "已中斷 · 按這裡重新啟動"
@@ -135,9 +136,10 @@ function renderBridgeUi() {
 
   const list = $("#bdAi");
   list.hidden = kind !== "ok" || !state.providers.length;
-  list.replaceChildren(...state.providers.map((p) => h("li", { class: p.available ? null : "na" },
+  list.replaceChildren(...state.providers.map((p) => h("li", { class: p.available ? null : p.needs_login ? "na login" : "na" },
     h("span", null, p.name),
-    h("small", null, p.available ? (p.models?.length ? `模型：${p.models.slice(0, 4).join("、")}` : "可用") : (p.reason || "不可用")))));
+    h("small", null, p.available ? (p.models?.length ? `模型：${p.models.slice(0, 4).join("、")}` : "可用") : (p.reason || "不可用")),
+    p.needs_login ? h("button", { type: "button", class: "btn btn-primary small bd-login", onclick: loginClaude }, loggingIn ? "等待登入…" : `登入 ${p.name}`) : null)));
 
   $("#bdDenied").hidden = bridgeUi.perm !== "denied" || kind === "ok";
   $("#bdUpdate").hidden = !bridgeUi.update;
@@ -859,7 +861,7 @@ async function startLesson(req = {}, trigger) {
     if (state.topic !== topic) return;
     setPanelHead("一問一答", "出題失敗");
     qa.replaceChildren(
-      h("div", { class: "notice err", role: "alert" }, errMsg(e) || FALLBACK_MSG),
+      h("div", { class: "notice err", role: "alert" }, bridgeErrorText(e) || FALLBACK_MSG),
       h("div", { class: "v-actions" },
         h("button", { type: "button", class: "btn btn-primary", onclick: () => startLesson(req) }, "再試一次"),
         h("button", { type: "button", class: "btn btn-ghost", onclick: closePanel }, "先到這")));
@@ -1322,7 +1324,7 @@ async function submitAnswer(l, form, ta, confName, msg, submitBtn, result) {
   } catch (e) {
     gpv.stop();
     setBusy(false);
-    result.replaceChildren(h("div", { class: "notice err", role: "alert" }, errMsg(e) || FALLBACK_MSG),
+    result.replaceChildren(h("div", { class: "notice err", role: "alert" }, bridgeErrorText(e) || FALLBACK_MSG),
       h("div", { class: "v-actions" }, h("button", { type: "button", class: "btn btn-primary", onclick: () => form.requestSubmit() }, "重試")));
     return;
   }
@@ -1447,7 +1449,8 @@ function bridgeErrorText(e) {
     if (!bridgeUi.update) { bridgeUi.update = { canAuto: !!bridgeUi.info?.build }; renderBridgeUi(); }
     return "你電腦上的橋接是舊版（「想學什麼」只接受很短的字數），請按左下角「本機橋接」更新到新版後再送出。";
   }
-  return errMsg(e);
+  const m = errMsg(e);
+  return /登入/.test(m) && /Claude/.test(m) ? `${m}（按左下角「本機橋接」→「登入 Claude Code」）` : m;
 }
 
 function ntStep(n) {
@@ -1718,6 +1721,39 @@ $("#testBridge").addEventListener("click", async (ev) => {
 
 // 「啟動橋接」：透過安裝時註冊的 learn3d-bridge:// 連結打開本機橋接，再等它回應。
 // 瀏覽器不能直接啟動電腦裡的程式，所以第一次要先執行安裝檔註冊這個連結（SmartDCA 同樣做法）。
+/**
+ * 登入 Claude Code：透過 learn3d-bridge://login 讓橋接打開登入視窗（claude auth login，瀏覽器登入 Claude 帳號），
+ * 再每 4 秒重新偵測 AI 工具，登入完成就自動變成可用。
+ */
+let loggingIn = false;
+async function loginClaude() {
+  if (loggingIn) return;
+  loggingIn = true;
+  bridgeUi.note = "電腦上會跳出「Learn 3D - Claude Code login」視窗，接著瀏覽器會要你登入 Claude 帳號（需要 Claude Pro 或 Max 訂閱）。看到 Login successful 就完成了。";
+  renderBridgeUi();
+  window.location.href = "learn3d-bridge://login";
+  let ok = false;
+  for (let i = 0; i < 45 && !ok; i++) {        // 最多約 3 分鐘
+    await new Promise((r) => setTimeout(r, 4000));
+    try {
+      const r = await api.providers(true);
+      state.providers = r.providers || [];
+      ok = state.providers.some((p) => p.id === "claude" && p.available);
+    } catch { /* 橋接忙碌：下一輪再試 */ }
+    if (i === 8 && !ok) {
+      bridgeUi.note = "還沒偵測到登入。沒有跳出登入視窗的話：舊版橋接不支援這個按鈕，請先「手動下載新版」重裝橋接；或自己打開命令提示字元執行 claude auth login。";
+    }
+    renderBridgeUi();
+  }
+  loggingIn = false;
+  if (ok) {
+    bridgeUi.note = "Claude Code 登入成功，可以開始出題了。";
+    renderAiSettings();
+    toast("Claude Code 已登入");
+  }
+  renderBridgeUi();
+}
+
 let launching = false;
 async function launchBridge() {
   if (launching) return;
