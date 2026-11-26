@@ -1,4 +1,6 @@
+# Cache-Control no-cache：每次都向伺服器確認版本（ETag），網站更新後不會卡在瀏覽器快取的舊 app.js / 舊橋接 zip
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: microphone=(self), camera=(), geolocation=()
+  Cache-Control: no-cache

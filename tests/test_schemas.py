@@ -223,3 +223,27 @@ def test_plan_request_slug_and_mode():
 
 def test_confirm_request():
     assert ConfirmRequest(confirm="reset").confirm == "reset"
+
+
+def test_provider_error_is_surfaced_not_swallowed():
+    """AI 工具本身用不了（沒登入、額度用完）時要把原因交給 API 層，不是回 None 變成看不出原因的「暫時無法產生」。"""
+    import pytest
+    from learn3d.providers.base import LLMProvider, ProviderError
+    from learn3d.schemas import AiChoice, Intake
+    from learn3d.structured import call_structured
+
+    class NoLogin(LLMProvider):
+        id = "fake"
+        name = "x"
+        calls = 0
+
+        def chat_json(self, *a, **k):
+            NoLogin.calls += 1
+            raise ProviderError("Claude Code 的登入過期或尚未登入", retryable=False)
+
+        def info(self, refresh=False):  # pragma: no cover
+            raise NotImplementedError
+
+    with pytest.raises(ProviderError, match="登入"):
+        call_structured(NoLogin(), Intake, "s", "u", task="intake", ai=AiChoice(provider="fake"))
+    assert NoLogin.calls == 1  # 不可重試的錯誤不重試

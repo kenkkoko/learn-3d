@@ -169,6 +169,10 @@ class ClaudeProvider(LLMProvider):
         async def _ask() -> str:
             texts: list[str] = []
             final: str | None = None
+            failure: str | None = None
+            # 不能在 async for 裡直接 raise：SDK 的產生器還在執行，會變成
+            # 「aclose(): asynchronous generator is already running」，真正的原因（例如沒登入）就被蓋掉了。
+            # 先記下來，讓產生器正常結束後再丟出。
             async for msg in sdk.query(prompt=user, options=options):
                 if isinstance(msg, sdk.AssistantMessage):
                     for block in msg.content:
@@ -176,9 +180,11 @@ class ClaudeProvider(LLMProvider):
                             texts.append(block.text)
                 elif isinstance(msg, sdk.ResultMessage):
                     if msg.is_error or msg.subtype != "success":
-                        detail = "; ".join(msg.errors or []) or msg.result or msg.subtype
-                        raise ProviderError(friendly_error(str(detail)))
-                    final = msg.result
+                        failure = str("; ".join(getattr(msg, "errors", None) or []) or msg.result or msg.subtype)
+                    else:
+                        final = msg.result
+            if failure is not None:
+                raise ProviderError(friendly_error(failure), retryable=not _LOGIN_RE.search(failure))
             return final if final else "".join(texts)
 
         try:
