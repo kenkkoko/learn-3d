@@ -350,6 +350,50 @@ def lecture_cache_clear(topic: str, keep: set[str] | None = None) -> None:
 
 
 # ---------- 刪除 / 重設 / 備份 ----------
+# ---------- 作答日誌（journal.jsonl：一行一筆，只附加不改寫） ----------
+def _journal_path(topic: str) -> Path:
+    return topic_dir(topic) / "journal.jsonl"
+
+
+def journal_append(topic: str, entry: dict) -> None:
+    """附加一筆日誌。單行 JSON + 換行，一次 write，不會和既有內容交錯。"""
+    path = _journal_path(topic)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    line = json.dumps(entry, ensure_ascii=False, separators=(",", ":")) + "\n"
+    with open(path, "a", encoding="utf-8", newline="\n") as f:
+        f.write(line)
+
+
+def journal_read(topic: str, limit: int = 30, before: str | None = None,
+                 node: str | None = None) -> tuple[list[dict], bool]:
+    """最新的在前。before＝上一頁最後一筆的 id（往更早翻）；node＝只看某節點。
+
+    壞掉的行（例如被手動編輯）直接略過，不讓整個紀錄打不開。
+    """
+    path = _journal_path(topic)
+    if not path.exists():
+        return [], False
+    rows: list[dict] = []
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            d = json.loads(raw)
+        except ValueError:
+            continue
+        if isinstance(d, dict) and d.get("id"):
+            rows.append(d)
+    rows.reverse()
+    if node:
+        rows = [r for r in rows if r.get("node") == node]
+    if before:
+        idx = next((i for i, r in enumerate(rows) if r.get("id") == before), None)
+        rows = rows[idx + 1:] if idx is not None else []
+    limit = max(1, min(limit, 100))
+    return rows[:limit], len(rows) > limit
+
+
 def _stamp() -> str:
     return datetime.now(TW).strftime("%Y%m%d%H%M%S")
 

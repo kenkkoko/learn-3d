@@ -122,6 +122,14 @@ async function mockRoute(method, path, body) {
     const progress = await mockJson("progress");
     return { topic: "sql", progress };
   }
+  if (/^\/topics\/[a-z0-9-]+\/journal(\?|$)/.test(path)) {
+    const q = new URLSearchParams(path.split("?")[1] || "");
+    const all = (await mockJson("journal")).entries;
+    let rows = q.get("node") ? all.filter((e) => e.node === q.get("node")) : all;
+    if (q.get("before")) rows = rows.slice(rows.findIndex((e) => e.id === q.get("before")) + 1);
+    const limit = Number(q.get("limit") || 30);
+    return { entries: rows.slice(0, limit), has_more: rows.length > limit };
+  }
   const m = path.match(/^\/topics\/([a-z0-9-]+)(\/[a-z]+)?$/);
   if (m) {
     const [, , sub] = m;
@@ -204,5 +212,11 @@ export const api = {
   grade: (t, req) => call("POST", `/topics/${encodeURIComponent(t)}/grade`, req, { timeout: 180000 }),
   jump: (t, node) => call("POST", `/topics/${encodeURIComponent(t)}/jump`, { node }),
   reset: (t) => call("POST", `/topics/${encodeURIComponent(t)}/reset`, { confirm: "reset" }),
+  journal: (t, { limit = 30, before, node } = {}) => {
+    const q = new URLSearchParams({ limit: String(limit) });
+    if (before) q.set("before", before);
+    if (node) q.set("node", node);
+    return call("GET", `/topics/${encodeURIComponent(t)}/journal?${q}`);
+  },
   remove: (t) => call("DELETE", `/topics/${encodeURIComponent(t)}`, { confirm: t }),
 };

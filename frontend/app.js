@@ -279,6 +279,8 @@ async function selectTopic(slug) {
   if (!slug) return;
   state.topic = slug;
   state.selected = null;
+  journal.rows = []; journal.stale = true;
+  if (!$("#journal").hidden) loadJournal(true);
   try { history.replaceState(null, "", `${location.search}#${encodeURIComponent(slug)}`); } catch { /* 忽略 */ }
   renderRooms();
   $("#emptyState").hidden = true;
@@ -656,6 +658,109 @@ if (layout.collapsed && !isMobile()) setSideCollapsed(true, { focus: false });
 applyLayout();
 
 // ======================================================================
+// 作答日誌（右側面板「紀錄」分頁）
+// ======================================================================
+const journal = { rows: [], hasMore: false, onlyCurrent: false, stale: true, loading: false };
+
+function showPanelTab(name) {
+  const isQa = name === "qa";
+  for (const [tab, panel, on] of [["#tabQa", "#qa", isQa], ["#tabJournal", "#journal", !isQa]]) {
+    $(tab).setAttribute("aria-selected", String(on));
+    $(tab).tabIndex = on ? 0 : -1;
+    $(panel).hidden = !on;
+  }
+  if (!isQa && (journal.stale || !journal.rows.length)) loadJournal(true);
+}
+$("#tabQa").addEventListener("click", () => showPanelTab("qa"));
+$("#tabJournal").addEventListener("click", () => showPanelTab("journal"));
+$(".panel-tabs").addEventListener("keydown", (ev) => {
+  if (ev.key !== "ArrowLeft" && ev.key !== "ArrowRight") return;
+  ev.preventDefault();
+  const next = $("#tabQa").getAttribute("aria-selected") === "true" ? "journal" : "qa";
+  showPanelTab(next);
+  $(next === "qa" ? "#tabQa" : "#tabJournal").focus();
+});
+
+async function loadJournal(reset) {
+  const box = $("#journal");
+  if (!state.topic) { box.replaceChildren(h("p", { class: "qa-empty" }, "先選一個主題。")); return; }
+  if (journal.loading) return;
+  journal.loading = true;
+  if (reset) {
+    journal.rows = [];
+    box.replaceChildren(h("div", { class: "loading", role: "status" }, h("span", { class: "spinner", "aria-hidden": "true" }), "載入紀錄中…"));
+  }
+  try {
+    const node = journal.onlyCurrent ? state.progress?.current : undefined;
+    const before = reset ? undefined : journal.rows.at(-1)?.id;
+    const r = await api.journal(state.topic, { limit: 20, before, node });
+    journal.rows = reset ? r.entries : journal.rows.concat(r.entries);
+    journal.hasMore = r.has_more;
+    journal.stale = false;
+  } catch (e) {
+    box.replaceChildren(h("p", { class: "qa-empty" }, `紀錄載入失敗：${errMsg(e)}`));
+    journal.loading = false;
+    return;
+  }
+  journal.loading = false;
+  renderJournal();
+}
+
+function renderJournal() {
+  const box = $("#journal");
+  const cur = state.progress?.nodes?.find((n) => n.id === state.progress?.current);
+  const filter = h("label", { class: "jr-filter" },
+    h("input", { type: "checkbox", checked: journal.onlyCurrent || null,
+      onchange: (ev) => { journal.onlyCurrent = ev.target.checked; loadJournal(true); } }),
+    ` 只看目前節點${cur ? `（${cur.name}）` : ""}`);
+  const head = h("div", { class: "jr-head" }, filter,
+    h("span", { class: "jr-note" }, "存在你電腦的 ~/.claude/learn-data/<主題>/journal.jsonl"));
+  if (!journal.rows.length) {
+    box.replaceChildren(head, h("p", { class: "qa-empty" }, "還沒有紀錄。答完一題，題目、你的答案和回饋就會出現在這裡。"));
+    return;
+  }
+  const groups = new Map();
+  for (const e of journal.rows) {
+    const d = (e.at || "").slice(0, 10);
+    if (!groups.has(d)) groups.set(d, []);
+    groups.get(d).push(e);
+  }
+  const lists = [...groups].map(([d, items]) => h("section", { class: "jr-day" },
+    h("h3", null, d || "未知日期"), ...items.map(journalItem)));
+  const more = journal.hasMore
+    ? h("button", { type: "button", class: "btn btn-ghost wide", onclick: () => loadJournal(false) }, "載入更早的紀錄")
+    : null;
+  box.replaceChildren(...[head, ...lists, more].filter(Boolean));
+}
+
+function journalItem(e) {
+  const time = (e.at || "").slice(11, 16);
+  const isCode = /^\s*(select|with|insert|update|delete|create)\b/i.test(e.answer || "") || !!e.exec_user;
+  const block = (title, text, mono) => text ? h("div", { class: "jr-block" },
+    h("div", { class: "jr-label" }, title),
+    h(mono ? "pre" : "p", { class: mono ? "code" : "jr-text", text })) : null;
+  return h("details", { class: `jr-item r-${e.result}` },
+    h("summary", null,
+      h("span", { class: "jr-res" }, RESULT_TEXT[e.result] || e.result),
+      e.danger ? h("span", { class: "jr-danger" }, "🚨 危險迷思") : null,
+      h("span", { class: "jr-node" }, e.node_name || e.node),
+      h("span", { class: "jr-meta" }, `${time} · ${TYPE_TEXT[e.type] || e.type}${e.kind === "review" ? " · 複習" : ""}`),
+      h("span", { class: "jr-q" }, e.question)),
+    h("div", { class: "jr-body" },
+      block("題目", e.question, false),
+      block("你的答案", e.answer, isCode),
+      h("div", { class: "jr-facts" },
+        h("span", null, CONF_TEXT[e.confidence] || e.confidence),
+        h("span", null, `分數 ${e.delta > 0 ? "+" : ""}${e.delta}`),
+        e.source === "skill" ? h("span", null, "來自 Claude Code") : null),
+      block("回饋", e.feedback, false),
+      e.exec_user || e.exec_ref ? h("div", { class: "v-compare" },
+        block("你的執行結果", e.exec_user, true), block("預期結果", e.exec_ref, true)) : null,
+      block("參考答案", e.reference_answer, isCode),
+      e.misconception_label ? h("p", { class: "jr-mis" }, `📝 迷思筆記：${e.misconception_label}`) : null));
+}
+
+// ======================================================================
 // 問答
 // ======================================================================
 const qa = $("#qa");
@@ -677,6 +782,7 @@ function setPanelHead(eyebrow, title) {
 async function startLesson(req = {}, trigger) {
   if (!state.topic) return;
   openPanel(trigger || document.activeElement);
+  showPanelTab("qa");
   state.lastReq = req;
   const topic = state.topic;
   setPanelHead(req.review ? "複習" : "一問一答", "出題中…");
@@ -1088,6 +1194,7 @@ async function submitAnswer(l, form, ta, confName, msg, submitBtn, result) {
   msg.textContent = "";
   renderVerdict(l, res, execRes, conf, result);
   applyGrade(l, res, conf);
+  if (!res.offtopic && !res.fallback) journal.stale = true;
 }
 
 function firstLines(s, n = 5) {

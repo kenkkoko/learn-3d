@@ -245,6 +245,34 @@ class GradeResponse(_Strict):
     fallback: bool = False  # Schema 全部失敗、回傳預設訊息
 
 
+class JournalEntry(_Strict):
+    """作答日誌一筆（journal.jsonl 一行）：回頭複習自己怎麼答、AI 怎麼回饋。"""
+
+    id: str
+    at: str  # ISO 8601（台灣時間）
+    node: str
+    node_name: str
+    kind: Literal["new", "review"]
+    type: QuestionType
+    question: str
+    answer: str  # 已遮蔽個資
+    confidence: Confidence
+    result: Result
+    danger: bool
+    delta: int
+    feedback: str
+    reference_answer: str
+    misconception_label: str | None = None
+    exec_user: str | None = None  # 執行結果（截斷）
+    exec_ref: str | None = None
+    source: Literal["web", "skill"] = "web"
+
+
+class JournalResponse(_Strict):
+    entries: list[JournalEntry]
+    has_more: bool
+
+
 class JumpRequest(_Strict):
     node: str
 

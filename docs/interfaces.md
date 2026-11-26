@@ -115,6 +115,8 @@ def reset(topic: str) -> dict                           # 先備份 progress.jso
 def rubric_to_file(r: Rubric) -> dict                   # → {"answer","accept","mustHave","traps":[{"if","label"}]}
 def rubric_from_file(d: dict) -> Rubric
 def public_progress(p: dict) -> dict                    # 移除 lastQuestion.rubric
+def journal_append(topic: str, entry: dict) -> None     # journal.jsonl 附加一行
+def journal_read(topic, limit=30, before=None, node=None) -> tuple[list[dict], bool]
 ```
 `api.py`（FastAPI）路由：
 
@@ -129,6 +131,7 @@ def public_progress(p: dict) -> dict                    # 移除 lastQuestion.ru
 | POST | `/plan` | `PlanRequest` | `{topic, progress}`；已存在且 `confirm=false` → 409 `ErrorResponse(needs_confirm=true)` |
 | POST | `/topics/{t}/lesson` | `LessonRequest` | `PublicLesson` |
 | POST | `/topics/{t}/grade` | `GradeRequest` | `GradeResponse` |
+| GET | `/topics/{t}/journal?limit=30&before=<id>&node=<id>` | — | `JournalResponse`（最新在前；`before` 往更早翻頁）|
 | POST | `/topics/{t}/jump` | `JumpRequest` | `{current}` |
 | POST | `/topics/{t}/reset` | `ConfirmRequest(confirm="reset")` | `{progress}` |
 | DELETE | `/topics/{t}` | `ConfirmRequest(confirm=<t>)` | `{ok}` |

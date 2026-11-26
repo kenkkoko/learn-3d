@@ -163,11 +163,16 @@
       </button>
       </div>
     </header>
-    <div class="panel-body" id="qa">
+    <div class="panel-tabs" role="tablist" aria-label="問答面板">
+      <button type="button" role="tab" class="ptab" id="tabQa" aria-selected="true" aria-controls="qa">問答</button>
+      <button type="button" role="tab" class="ptab" id="tabJournal" aria-selected="false" aria-controls="journal" tabindex="-1">紀錄</button>
+    </div>
+    <div class="panel-body" id="qa" role="tabpanel" aria-labelledby="tabQa">
       <div class="qa-empty">
         <p>按「繼續學」或在節點上按「從這裡練」開始一題。</p>
       </div>
     </div>
+    <div class="panel-body journal" id="journal" role="tabpanel" aria-labelledby="tabJournal" hidden></div>
   </aside>
   <button type="button" class="panel-tab" id="panelTab" aria-controls="panel" aria-expanded="false">問答</button>
   <button type="button" class="side-tab" id="sideTab" aria-controls="sidebar" aria-expanded="false" hidden>主題</button>

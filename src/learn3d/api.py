@@ -17,6 +17,7 @@ import logging
 import threading
 import time
 import uuid
+from datetime import datetime, timedelta, timezone
 from collections import deque
 from contextlib import contextmanager
 from typing import Any, Callable, Iterator
@@ -36,6 +37,7 @@ from .schemas import (
     GradeResponse,
     Intake,
     IntakeRequest,
+    JournalResponse,
     JumpRequest,
     LessonRequest,
     NodeState,
@@ -159,6 +161,48 @@ def _node_state(progress: dict, node_id: str) -> NodeState:
 
 
 # ---------- App ----------
+def _journal(t: str, progress: dict, lq: dict, req: GradeRequest, verdict: Verdict, danger: bool,
+             delta: int, mis_label: str | None, reference: str) -> None:
+    """判定完成後寫一筆作答日誌。寫入失敗只記 log，不影響判定結果（進度已經存好了）。"""
+    node_id = lq.get("node") or ""
+    node = next((n for n in progress.get("nodes", []) if n.get("id") == node_id), {})
+    cut = lambda x, n: (x[:n] + "…") if x and len(x) > n else x  # noqa: E731
+    entry = {
+        "id": uuid.uuid4().hex[:12],
+        "at": datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds"),
+        "node": node_id,
+        "node_name": str(node.get("name") or node_id),
+        "kind": "review" if lq.get("kind") == "review" else "new",
+        "type": lq.get("type") or "explain",
+        "question": str(lq.get("question") or ""),
+        "answer": guardrails.mask_pii(req.answer),
+        "confidence": req.confidence,
+        "result": verdict.result,
+        "danger": bool(danger),
+        "delta": int(delta),
+        "feedback": verdict.feedback,
+        "reference_answer": reference,
+        "misconception_label": mis_label,
+        "exec_user": cut(req.exec.user_output, 1500) if req.exec else None,
+        "exec_ref": cut(req.exec.ref_output, 1500) if req.exec else None,
+        "source": "web",
+    }
+    try:
+        store.journal_append(t, entry)
+    except OSError as e:
+        log.warning("作答日誌寫入失敗：%s", e)
+
+
+def _journal_model(row: dict):
+    """把日誌的一行轉成模型；skill 寫的舊格式或壞資料略過，不讓整頁打不開。"""
+    from .schemas import JournalEntry
+    try:
+        return JournalEntry.model_validate({**{"source": "web", "danger": False, "delta": 0, "kind": "new",
+                                               "reference_answer": "", "misconception_label": None}, **row})
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     app = FastAPI(title="learn3d-bridge", version=__version__, docs_url=None, redoc_url=None, openapi_url=None)
@@ -484,6 +528,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             store.save(t, new_p)
             # delta / 節點狀態一律以存檔前後該節點 score 差計算（複習題與新題相同）
             final = _node_state(new_p, node_id)
+            _journal(t, new_p, lq, req, verdict, danger, final.score - old_score, mis_label, rubric.answer)
 
         return GradeResponse(
             result=verdict.result,
@@ -494,6 +539,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             misconception_label=mis_label,
             reference_answer=rubric.answer,
         )
+
+    # ----- 作答日誌 -----
+    @app.get("/topics/{t}/journal", response_model=JournalResponse)
+    def get_journal(t: str, limit: int = 30, before: str | None = None, node: str | None = None):
+        _check_topic(t)
+        if not store.exists(t):
+            raise store.TopicNotFound(t)
+        rows, more = store.journal_read(t, limit=limit, before=before, node=node)
+        return JournalResponse(entries=[e for e in (_journal_model(r) for r in rows) if e is not None], has_more=more)
 
     # ----- 跳轉 / 重設 / 刪除 -----
     @app.post("/topics/{t}/jump")
