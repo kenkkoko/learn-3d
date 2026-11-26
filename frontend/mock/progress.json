@@ -1,0 +1,595 @@
+{
+ "version": 1,
+ "topic": "sql",
+ "title": "SQL：用工廠 ERP／MES 資料備戰筆試與到職",
+ "domain": "code",
+ "runner": "sql",
+ "created": "2026-11-26",
+ "learner": {
+  "goal": "準備 ERP／資訊工程職缺的手寫 SQL 筆試，以及到職後用 SQL Agent、RAG 串接資料庫",
+  "level": "完全沒碰過 SQL",
+  "context": "電子廠 ERP / MES：料號、供應商、採購單、工單良率、員工主管",
+  "minutes": 30,
+  "notes": "筆試是手寫：produce 題要求先不靠執行手寫完整語法，逗號、單引號、GROUP BY 欄位等語法細節要算分；職場用 Oracle 與 MS SQL，講解時順帶一句方言差異；每次可連續練 4–6 題；【零基礎】新名詞先用白話解釋，一次只講一小段程式，逐字翻成中文；不丟整段看不懂的程式碼；少用抽象比喻，用表格或具體例子。"
+ },
+ "envNote": "practice.db（SQLite）：suppliers(supplier_id,name,city,rating 可能 NULL；8 新創模具 沒被採購過)、materials(material_id 料號,name,category 原料/化學品/零件/包材,unit,unit_cost,supplier_id 有 NULL 與不存在的 99,safety_stock,stock_qty 有 NULL)、purchase_orders(po_id,material_id,supplier_id,qty,unit_price 有 NULL,order_date,due_date,received_date NULL=未到貨,status 開立/部分到貨/結案/取消；2026-09~11 共 24 筆)、work_orders(wo_id,product,line L1~L3,plan_qty,good_qty,ng_qty 未完工為 NULL,start_date,end_date,status 生產中/完工/暫停)、employees(emp_id,name,dept 資訊處/採購/生管/品保/製造,title,manager_id 自我參照,hire_date,salary 有同薪與 NULL)",
+ "current": "where-basic",
+ "nodes": [
+  {
+   "id": "db-basics",
+   "name": "資料表、列、欄與主鍵",
+   "layer": 1,
+   "prereqs": [],
+   "summary": "能說出一張表的列、欄代表什麼，以及主鍵、外鍵怎麼把表連起來",
+   "pitfalls": [
+    "以為資料庫就是 Excel，列的順序有意義",
+    "以為主鍵可以重複或是 NULL",
+    "分不清外鍵是指向「別張表的主鍵」"
+   ],
+   "status": "weak",
+   "score": 1,
+   "lastSeen": "2026-11-26",
+   "history": [
+    {
+     "date": "2026-11-26",
+     "type": "predict",
+     "confidence": "mid",
+     "result": "ok"
+    }
+   ]
+  },
+  {
+   "id": "select-basic",
+   "name": "SELECT 挑欄位與別名",
+   "layer": 2,
+   "prereqs": [
+    "db-basics"
+   ],
+   "summary": "能寫出 SELECT 欄位 FROM 表，用 AS 取別名、做簡單計算欄位",
+   "pitfalls": [
+    "欄位之間漏逗號，或最後一個欄位後面多一個逗號",
+    "以為 SELECT * 是好習慣",
+    "字串用雙引號（標準 SQL 字串要用單引號）"
+   ],
+   "status": "shaky",
+   "score": 3,
+   "lastSeen": "2026-11-26",
+   "history": [
+    {
+     "date": "2026-11-26",
+     "type": "predict",
+     "confidence": "mid",
+     "result": "ok"
+    },
+    {
+     "date": "2026-11-26",
+     "type": "predict",
+     "confidence": "mid",
+     "result": "ok"
+    },
+    {
+     "date": "2026-11-26",
+     "type": "predict",
+     "confidence": "mid",
+     "result": "ok"
+    }
+   ]
+  },
+  {
+   "id": "create-table",
+   "name": "CREATE TABLE 與約束",
+   "layer": 2,
+   "prereqs": [
+    "db-basics"
+   ],
+   "summary": "能手寫建表語法，設定資料型別、PRIMARY KEY、NOT NULL、FOREIGN KEY",
+   "pitfalls": [
+    "欄位定義之間漏逗號",
+    "以為 FOREIGN KEY 會自動建出另一張表",
+    "分不清 NOT NULL 跟 DEFAULT"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "where-basic",
+   "name": "WHERE 篩選",
+   "layer": 3,
+   "prereqs": [
+    "select-basic"
+   ],
+   "summary": "能用 =、<>、>、< 只挑出符合條件的列",
+   "pitfalls": [
+    "字串或日期忘了加單引號",
+    "把 WHERE 寫在 FROM 前面",
+    "用欄位別名寫在 WHERE 裡（WHERE 看不到 SELECT 的別名）"
+   ],
+   "status": "shaky",
+   "score": 4,
+   "lastSeen": "2026-11-26",
+   "history": [
+    {
+     "date": "2026-11-26",
+     "type": "explain",
+     "confidence": "mid",
+     "result": "partial"
+    },
+    {
+     "date": "2026-11-26",
+     "type": "produce",
+     "confidence": "mid",
+     "result": "partial"
+    },
+    {
+     "date": "2026-11-26",
+     "type": "produce",
+     "confidence": "mid",
+     "result": "ok"
+    },
+    {
+     "date": "2026-11-26",
+     "type": "predict",
+     "confidence": "mid",
+     "result": "ok"
+    },
+    {
+     "date": "2026-11-26",
+     "type": "produce",
+     "confidence": "mid",
+     "result": "wrong"
+    },
+    {
+     "date": "2026-11-26",
+     "type": "produce",
+     "confidence": "mid",
+     "result": "ok"
+    }
+   ]
+  },
+  {
+   "id": "order-distinct",
+   "name": "排序、去重與取前幾筆",
+   "layer": 3,
+   "prereqs": [
+    "select-basic"
+   ],
+   "summary": "能用 ORDER BY 多欄排序、DISTINCT 去重、LIMIT 取前 N 筆",
+   "pitfalls": [
+    "以為沒寫 ORDER BY 結果也有固定順序",
+    "以為 DISTINCT 只作用在第一個欄位",
+    "DESC 只套用到它前面那一個欄位，不是全部"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "logic-ops",
+   "name": "AND/OR、IN、BETWEEN、LIKE",
+   "layer": 4,
+   "prereqs": [
+    "where-basic"
+   ],
+   "summary": "能組合多個條件，正確使用括號、IN 清單、BETWEEN 範圍、LIKE 萬用字元",
+   "pitfalls": [
+    "AND 優先於 OR，沒加括號導致條件跑掉",
+    "以為 BETWEEN 不含兩端",
+    "LIKE 的 % 和 _ 搞混"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "null-handling",
+   "name": "NULL 與 COALESCE",
+   "layer": 4,
+   "prereqs": [
+    "where-basic"
+   ],
+   "summary": "能用 IS NULL / IS NOT NULL 判斷空值，用 COALESCE 補值，知道 NULL 參與運算的結果",
+   "pitfalls": [
+    "用 = NULL 判斷空值",
+    "以為 NULL 等於 0 或空字串",
+    "以為 NULL + 100 = 100"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "aggregate",
+   "name": "聚合函數 COUNT/SUM/AVG/MAX/MIN",
+   "layer": 4,
+   "prereqs": [
+    "where-basic"
+   ],
+   "summary": "能算出總數、合計、平均、最大最小值，知道 NULL 對聚合的影響",
+   "pitfalls": [
+    "COUNT(*) 與 COUNT(欄位) 差在會不會算 NULL",
+    "以為 AVG 會把 NULL 當 0",
+    "聚合函數和一般欄位混在 SELECT 卻沒 GROUP BY"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "string-date-funcs",
+   "name": "字串與日期函數",
+   "layer": 4,
+   "prereqs": [
+    "where-basic"
+   ],
+   "summary": "能做字串串接、擷取、日期比較與日期區間篩選（例如某個月的採購單）",
+   "pitfalls": [
+    "日期區間的結束日沒算進去（< 與 <= 搞混）",
+    "把日期當數字比大小卻格式不一致",
+    "不同資料庫的函數名稱不同（SUBSTR / SUBSTRING）"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "inner-join",
+   "name": "INNER JOIN 合併兩張表",
+   "layer": 4,
+   "prereqs": [
+    "where-basic",
+    "create-table"
+   ],
+   "summary": "能用 JOIN … ON 依外鍵把兩張表接起來，並用表別名指定欄位",
+   "pitfalls": [
+    "忘了寫 ON 條件導致笛卡兒積（列數暴增）",
+    "兩張表都有的欄位沒加表名，造成欄位不明確",
+    "以為 INNER JOIN 會保留對不到的列"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "dml",
+   "name": "INSERT / UPDATE / DELETE",
+   "layer": 4,
+   "prereqs": [
+    "where-basic",
+    "create-table"
+   ],
+   "summary": "能手寫新增、修改、刪除資料的語法",
+   "pitfalls": [
+    "UPDATE / DELETE 忘了寫 WHERE，整張表被改掉",
+    "INSERT 欄位數和 VALUES 數量對不上",
+    "UPDATE 多欄位時用 AND 連接（要用逗號）"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "group-by",
+   "name": "GROUP BY 分組統計",
+   "layer": 5,
+   "prereqs": [
+    "aggregate"
+   ],
+   "summary": "能依某欄位分組算統計，例如每個供應商的採購金額",
+   "pitfalls": [
+    "SELECT 裡出現沒放進 GROUP BY、也沒被聚合的欄位",
+    "以為 GROUP BY 會自動排序",
+    "分組後還想看每一筆明細"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "case-when",
+   "name": "CASE WHEN 條件欄位",
+   "layer": 5,
+   "prereqs": [
+    "logic-ops",
+    "null-handling"
+   ],
+   "summary": "能用 CASE WHEN 依條件產生分類欄位，或做條件加總（樞紐表）",
+   "pitfalls": [
+    "忘了寫 END",
+    "條件順序寫錯，前面的條件先吃掉",
+    "沒寫 ELSE 時結果是 NULL"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "left-join",
+   "name": "LEFT JOIN 與找出對不到的資料",
+   "layer": 5,
+   "prereqs": [
+    "inner-join",
+    "null-handling"
+   ],
+   "summary": "能用 LEFT JOIN 保留左表全部資料，並用 IS NULL 找出「從沒下過單的供應商」",
+   "pitfalls": [
+    "以為 LEFT JOIN 會刪掉對不到的列",
+    "把右表條件寫在 WHERE，結果變回 INNER JOIN",
+    "COUNT(*) 把沒對到的那列也算成 1"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "self-join",
+   "name": "自我連接（員工與主管）",
+   "layer": 5,
+   "prereqs": [
+    "inner-join"
+   ],
+   "summary": "能把同一張表 JOIN 自己，例如列出每個員工和他的主管姓名",
+   "pitfalls": [
+    "同一張表沒取兩個不同的別名",
+    "ON 條件方向寫反（主管 id 對到員工 id）",
+    "用 INNER JOIN 把沒有主管的最高主管漏掉"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "subquery",
+   "name": "子查詢",
+   "layer": 5,
+   "prereqs": [
+    "aggregate",
+    "logic-ops"
+   ],
+   "summary": "能在 WHERE 或 FROM 裡放子查詢，例如找出單價高於平均的料號",
+   "pitfalls": [
+    "子查詢回傳多列卻用 = 比較",
+    "忘了幫 FROM 裡的子查詢取別名",
+    "以為子查詢一定比 JOIN 慢"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "transaction",
+   "name": "交易與 ACID",
+   "layer": 5,
+   "prereqs": [
+    "dml"
+   ],
+   "summary": "能說明 BEGIN / COMMIT / ROLLBACK 的用途，以及為什麼扣庫存和建單要放同一個交易",
+   "pitfalls": [
+    "以為 DELETE 之後還能自動復原",
+    "分不清 COMMIT 和 ROLLBACK 的時機",
+    "不知道交易沒結束時其他人看不到改動"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "dialects",
+   "name": "Oracle / MS SQL / SQLite 方言差異",
+   "layer": 5,
+   "prereqs": [
+    "order-distinct",
+    "null-handling",
+    "string-date-funcs"
+   ],
+   "summary": "能把同一個查詢改寫成 Oracle 與 MS SQL 版本：取前 N 筆、空值補值、目前時間、字串串接",
+   "pitfalls": [
+    "MS SQL 用 TOP、Oracle 用 FETCH FIRST / ROWNUM，不是 LIMIT",
+    "NVL（Oracle）、ISNULL（MS SQL）、COALESCE（通用）搞混",
+    "Oracle 字串串接用 ||，MS SQL 用 +"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "having",
+   "name": "HAVING 篩選分組結果",
+   "layer": 6,
+   "prereqs": [
+    "group-by"
+   ],
+   "summary": "能用 HAVING 篩出符合條件的組，例如採購超過 3 次的料號",
+   "pitfalls": [
+    "把聚合條件寫在 WHERE（WHERE 不能放 SUM/COUNT）",
+    "分不清 WHERE 篩列、HAVING 篩組",
+    "HAVING 寫在 GROUP BY 前面"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "in-exists",
+   "name": "IN、EXISTS 與 NOT IN 的 NULL 陷阱",
+   "layer": 6,
+   "prereqs": [
+    "subquery",
+    "null-handling"
+   ],
+   "summary": "能用 IN / EXISTS 判斷「有沒有出現在另一張表」，知道 NOT IN 遇到 NULL 會查不到任何資料",
+   "pitfalls": [
+    "子查詢有 NULL 時 NOT IN 回傳空結果",
+    "EXISTS 子查詢沒跟外層表關聯",
+    "以為 EXISTS 會比對 SELECT 回傳的值"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "cte",
+   "name": "WITH（CTE）拆解複雜查詢",
+   "layer": 6,
+   "prereqs": [
+    "subquery"
+   ],
+   "summary": "能用 WITH 把多步驟查詢拆成好讀的區塊，例如先算每月採購額再比較",
+   "pitfalls": [
+    "多個 CTE 之間用 WITH 重複開頭（要用逗號）",
+    "CTE 最後忘了接主查詢",
+    "以為 CTE 會永久存在資料庫"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "window-funcs",
+   "name": "視窗函數 ROW_NUMBER / RANK / SUM OVER",
+   "layer": 6,
+   "prereqs": [
+    "group-by",
+    "order-distinct"
+   ],
+   "summary": "能用 OVER(PARTITION BY … ORDER BY …) 做排名、累計，不把資料壓成一列",
+   "pitfalls": [
+    "把 PARTITION BY 當成 GROUP BY，以為列數會變少",
+    "ROW_NUMBER、RANK、DENSE_RANK 遇到同分的差異",
+    "在 WHERE 裡直接用視窗函數（要包一層子查詢或 CTE）"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "exec-order",
+   "name": "SQL 邏輯執行順序",
+   "layer": 7,
+   "prereqs": [
+    "having",
+    "window-funcs"
+   ],
+   "summary": "能說出 FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT 的順序，並用它解釋常見錯誤",
+   "pitfalls": [
+    "以為 SQL 照寫的順序從 SELECT 開始執行",
+    "不懂為什麼 ORDER BY 能用別名、WHERE 不行",
+    "以為 DISTINCT 在 WHERE 之前執行"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "top-n",
+   "name": "面試經典題：第 N 高、每組前幾名、找重複",
+   "layer": 7,
+   "prereqs": [
+    "window-funcs",
+    "subquery"
+   ],
+   "summary": "能手寫第二高薪資、每個部門最高薪的人、找出重複資料這類筆試常考題",
+   "pitfalls": [
+    "第二高薪用 LIMIT 1 OFFSET 1 卻沒處理同薪",
+    "每組最高只用 GROUP BY + MAX 拿不到同一列的其他欄位",
+    "找重複忘了 HAVING COUNT(*) > 1"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "ai-sql-review",
+   "name": "檢查 AI 產生的 SQL（SQL Agent 情境）",
+   "layer": 7,
+   "prereqs": [
+    "left-join",
+    "having"
+   ],
+   "summary": "拿到 SQL Agent 或 AI 寫的查詢時，能判斷它有沒有答對問題、會不會漏資料或算錯",
+   "pitfalls": [
+    "只看有沒有跑出結果，不檢查列數與邏輯",
+    "沒發現 JOIN 把資料重複計算（金額被放大）",
+    "沒注意 AI 用了錯的方言語法或不存在的欄位"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  }
+ ],
+ "misconceptions": [
+  {
+   "id": "m1",
+   "node": "where-basic",
+   "label": "以為 NULL（空白）也會被 <> 選到",
+   "wrong": "空白沒有 A，所以 rating <> 'A' 會選到空白的列",
+   "right": "NULL 不會被 =、<> 這類比較選到；要找空白要用 IS NULL",
+   "scenarios": [
+    "supplier 評等 <> 'A'"
+   ],
+   "created": "2026-11-26",
+   "interval": 1,
+   "nextReview": "2026-11-26",
+   "hits": 1,
+   "retired": false
+  },
+  {
+   "id": "m2",
+   "node": "where-basic",
+   "label": "把 IS NULL 寫成字串或加上 =",
+   "wrong": "WHERE rating = 'IS NULL'",
+   "right": "空白要直接寫 WHERE rating IS NULL，不加引號、不加 =",
+   "scenarios": [
+    "supplier 評等空白"
+   ],
+   "created": "2026-11-26",
+   "interval": 1,
+   "nextReview": "2026-11-26",
+   "hits": 1,
+   "retired": false
+  },
+  {
+   "id": "m3",
+   "node": "where-basic",
+   "label": "AND 與 OR 搞混，且條件只寫值沒寫欄位",
+   "wrong": "WHERE city = '桃園' AND 'B'",
+   "right": "「或」用 OR，每個條件都要寫欄位：WHERE city = '桃園' OR rating = 'B'",
+   "scenarios": [
+    "supplier 城市或評等"
+   ],
+   "created": "2026-11-26",
+   "interval": 1,
+   "nextReview": "2026-11-26",
+   "hits": 1,
+   "retired": false
+  }
+ ],
+ "lastQuestion": null,
+ "stats": {
+  "answered": 7,
+  "correct": 6,
+  "streak": 2
+ }
+}

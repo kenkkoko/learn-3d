@@ -1,0 +1,55 @@
+# Prompt injection 偵測 regex（Python re，IGNORECASE）
+# 一行一個；以 # 開頭為註解。沿用 creativity-3d 的樣式再擴充。
+# 比對對象：NFKC 正規化（全形→半形）、轉小寫、移除零寬字元的文字，以及「去掉所有空白」的版本，任一命中即判定。
+# 英文 pattern 請用 \s* 連接單字，才能同時命中去空白的版本。
+# 注意：本表也用在「主題名稱」與「作答」，不要放會誤傷正常學習內容的樣式
+#      （例如單獨的 prompt、```、「角色設定」「系統指令」都可能是合法主題或作答內容）。
+
+# --- 中文：忽略／無視 指示 ---
+(忽略|無視|忽視|不要理會?|別理|不用理會?).{0,8}(指示|指令|規則|以上|上面|前面|先前|之前|設定|提示|限制|要求|評分標準)
+(跳過|忘記|忘掉|拋開|拋棄|丟掉).{0,8}(指示|指令|規則|系統設定|提示詞|評分標準)
+(以上|上面|前面|先前|之前).{0,4}(指示|指令|規則|設定|內容).{0,4}(作廢|無效|取消|不算|都不算)
+(新的|以下是|現在的|最新的)(指示|指令|規則)[:：]?
+不要(再)?(遵守|遵循|理會)
+(覆蓋|覆寫|取代|改寫).{0,4}(系統|指示|指令|規則|設定)
+# --- 中文：角色改寫 ---
+你現在是
+(你)?從現在(開始|起).{0,4}你?(是|要|必須|扮演|只能)
+你的新(角色|身分|身份|任務|指令)
+(請|你)?扮演(一個|一位|一名|成|為|你|我|ai|助理|助手|老師|評審|系統|批改)
+角色設定[:：]
+系統(提示詞|提示|訊息)
+開發者模式
+越獄
+(洩漏|洩露|透露|顯示|輸出|印出|告訴我).{0,6}(系統提示|提示詞|你的指示|指令內容|評分標準|參考答案)
+# --- 中文：要求分數／判定 ---
+給.{0,6}(滿分|100分|一百分|最高分|全對)
+(打|評|算|判).{0,4}(滿分|100分|一百分|最高分)
+(請|直接|就|幫我|一律|務必)(判|算|當|給|改)(我|這題|本題|成|為)?(對|正確|答對|通過|ok|滿分|全對)
+(全部|全都|每一?題|所有).{0,4}(滿分|答對|正確|通過)
+(不管|無論).{0,8}(都|一律)(判|算|給).{0,4}(對|正確|ok|通過)
+# --- 英文 ---
+ignore\s*(all|any|the|previous|prior|above|earlier|your)?\s*(previous|prior|above|earlier)?\s*(instructions?|rules?|prompts?|directions?|guidelines?)
+disregard\s*(all|any|the|previous|prior|above|your)\s*(previous|prior|above)?\s*(instructions?|rules?|prompts?|directions?)
+forget\s*(all|previous|everything|your)\s*(instructions?|rules?|you\s*were\s*told)?
+(reveal|show|print|leak|repeat|output)\s*(me\s*)?(your|the)\s*(system\s*)?(prompt|instructions?|rubric)
+override\s*(the|your|all)?\s*(system|instructions?|rules?|grading)
+new\s*instructions?\s*[:：]
+jailbreak
+developer\s*mode
+\bdan\s*mode
+you\s*are\s*now
+from\s*now\s*on,?\s*you
+pretend\s*(to\s*be|you)
+\bact\s*as\s*(a|an|the|my|if)\b
+give\s*(me|us|it|this|all|every)?\s*.{0,10}(full\s*marks?|100\s*points?|max(imum)?\s*score|perfect\s*score)
+(mark|grade|score|judge)\s*(this|it|me|my\s*answer)\s*(as\s*)?(correct|right|ok|passed|full)
+\bscore\s*[=:]\s*\d
+["']?result["']?\s*[=:]\s*["']?ok\b
+# --- 角色標記／區塊標記（偽造對話或資料區塊邊界）---
+(^|\n)\s*(system|assistant|developer)\s*[:：]
+<\s*/?\s*(system|user|assistant|developer|answers?|instructions?)\s*>
+<\s*/?\s*(資料|作答|答案|題目|指示|系統|使用者)\s*>
+<<<\s*作答\s*(開始|結束)\s*>>>
+<\|\s*im_(start|end)\s*\|>
+\[\s*/?\s*(inst|system)\s*\]

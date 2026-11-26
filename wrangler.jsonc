@@ -1,0 +1,12 @@
+{
+  // Cloudflare Workers 靜態資產：只部署 frontend/（橋接在使用者自己的電腦上跑，不部署）
+  "name": "learn-3d",
+  "compatibility_date": "2026-06-01",
+  "assets": {
+    "directory": "./frontend",
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [
+    { "pattern": "learn.hellokai07.com", "custom_domain": true }
+  ]
+}

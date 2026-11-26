@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#08080a" />
+<meta name="color-scheme" content="dark" />
+<meta name="description" content="Learn 3D：任何主題都能生成學習路徑，在 3D 知識星雲裡看見熟練度，一問一答練到真的會。" />
+<title>Learn 3D · 知識星雲</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./app.css" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+<link rel="modulepreload" href="./app.js" />
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- 手機頂欄 -->
+  <header class="mobilebar">
+    <button type="button" class="icon-btn" id="openSidebar" aria-label="主題清單" aria-controls="sidebar" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+    </button>
+    <span class="mobilebar-title" id="mobileTitle">Learn 3D</span>
+    <button type="button" class="icon-btn" id="openPanelMobile" aria-label="問答面板" aria-controls="panel" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v10H9l-4 4z" /></svg>
+    </button>
+  </header>
+
+  <!-- 左欄：主題房間 -->
+  <aside class="sidebar" id="sidebar" aria-label="主題清單">
+    <div class="sidebar-head">
+      <a class="brand" href="./"><span class="brand-dot" aria-hidden="true"></span>Learn 3D</a>
+      <span class="mock-badge" id="mockBadge" hidden>示範資料</span>
+      <button type="button" class="icon-btn drawer-close" id="closeSidebar" aria-label="關閉主題清單">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+    </div>
+    <button type="button" class="btn btn-primary wide new-topic" id="newTopicBtn">＋ 學新主題</button>
+    <nav class="rooms" aria-label="我的主題">
+      <ul id="roomList" class="room-list"><li class="muted pad">載入中…</li></ul>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="bridge-status" id="bridgeStatus" role="status" aria-live="polite">
+        <span class="dot" aria-hidden="true"></span><span class="txt">偵測橋接中…</span>
+      </div>
+      <details class="ai-settings" id="aiSettings">
+        <summary>AI 設定</summary>
+        <div class="ai-group" data-role="plan">
+          <div class="ai-group-title">規劃用 AI <span class="label">建立學習路徑，一次</span></div>
+          <label class="mini-field"><span>工具</span><select data-k="provider"></select></label>
+          <label class="mini-field"><span>模型</span><select data-k="model"></select></label>
+          <label class="mini-field"><span>推理強度</span><select data-k="effort"></select></label>
+        </div>
+        <div class="ai-group" data-role="daily">
+          <div class="ai-group-title">日常用 AI <span class="label">出題與判定</span></div>
+          <label class="mini-field"><span>工具</span><select data-k="provider"></select></label>
+          <label class="mini-field"><span>模型</span><select data-k="model"></select></label>
+          <label class="mini-field"><span>推理強度</span><select data-k="effort"></select></label>
+        </div>
+        <button type="button" class="text-btn" id="refreshProviders">重新偵測 AI 工具</button>
+      </details>
+    </div>
+  </aside>
+
+  <!-- 中間：學習路徑 + 星雲 -->
+  <main class="stage" id="stage">
+    <section class="bridge-card" id="bridgeCard" hidden aria-labelledby="bridgeCardTitle">
+      <div class="eyebrow">本機橋接</div>
+      <h2 id="bridgeCardTitle">還沒偵測到本機橋接</h2>
+      <p>出題和判定要用你電腦上的 AI（Claude Code / Codex / Ollama），需要先啟動橋接服務：</p>
+      <ol>
+        <li>Windows：雙擊專案裡的 <code>windows/Start-Learn-Bridge.bat</code></li>
+        <li>或在專案資料夾執行 <code>uv run learn3d-bridge</code></li>
+      </ol>
+      <p class="fineprint" id="bridgeCardNote">現在先用示範資料瀏覽；啟動後按「重新偵測」。</p>
+      <div class="row">
+        <button type="button" class="btn btn-primary" id="retryBridge">重新偵測</button>
+        <button type="button" class="btn btn-ghost" id="dismissBridgeCard">先看示範</button>
+      </div>
+    </section>
+
+    <section class="empty" id="emptyState" hidden>
+      <div class="eyebrow">Learn 3D</div>
+      <h1>想學什麼？</h1>
+      <p class="lead">輸入一個主題，回答 3–4 個小問題，就會產生你的學習路徑星雲。</p>
+      <button type="button" class="btn btn-primary" data-action="new-topic">＋ 學新主題</button>
+    </section>
+
+    <section class="topic" id="topicView" hidden>
+      <header class="topic-head">
+        <div class="topic-title-wrap">
+          <div class="eyebrow">學習路徑 · <span id="topicSlug"></span></div>
+          <h1 class="topic-title" id="topicTitle"></h1>
+          <div class="topic-meta" id="topicMeta"></div>
+        </div>
+        <div class="topic-actions">
+          <button type="button" class="btn btn-primary" id="continueBtn">繼續學</button>
+          <button type="button" class="btn btn-ghost" id="reviewBtn" hidden>複習 0 則</button>
+          <div class="seg" role="group" aria-label="檢視方式">
+            <button type="button" class="seg-btn" id="view3d" aria-pressed="true">3D</button>
+            <button type="button" class="seg-btn" id="viewList" aria-pressed="false">清單</button>
+          </div>
+          <button type="button" class="icon-btn" id="topicMenuBtn" popovertarget="topicMenu" aria-label="主題選項">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="19" cy="12" r="1.6" /></svg>
+          </button>
+          <div class="menu" id="topicMenu" popover>
+            <button type="button" class="menu-item" data-action="reset">重設進度…</button>
+            <button type="button" class="menu-item danger" data-action="delete">刪除主題…</button>
+          </div>
+        </div>
+      </header>
+
+      <ul class="legend" aria-label="圖例">
+        <li><i class="lg" data-s="unseen"></i>未學</li>
+        <li><i class="lg" data-s="weak"></i>不熟</li>
+        <li><i class="lg" data-s="shaky"></i>半熟</li>
+        <li><i class="lg" data-s="mastered"></i>熟練</li>
+        <li class="lg-extra"><i class="lg lg-current"></i>目前節點</li>
+        <li class="lg-extra"><i class="lg lg-locked"></i>先修未到黃燈</li>
+      </ul>
+
+      <div class="viz">
+        <div class="map" id="map" role="img" aria-label="3D 知識星雲。可切換到清單檢視用鍵盤瀏覽。">
+          <div class="map-hint" id="mapHint">拖曳旋轉 · 滾輪縮放 · 點節點看詳情</div>
+        </div>
+        <div class="list-view" id="listView" hidden></div>
+        <aside class="node-card" id="nodeCard" hidden aria-labelledby="nodeCardTitle" tabindex="-1"></aside>
+      </div>
+    </section>
+  </main>
+
+  <!-- 右側：問答面板 -->
+  <aside class="panel" id="panel" aria-labelledby="panelTitle">
+    <header class="panel-head">
+      <div>
+        <div class="eyebrow" id="panelEyebrow">一問一答</div>
+        <h2 class="panel-title" id="panelTitle">問答</h2>
+      </div>
+      <button type="button" class="icon-btn" id="closePanel" aria-label="收合問答面板">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+    </header>
+    <div class="panel-body" id="qa">
+      <div class="qa-empty">
+        <p>按「繼續學」或在節點上按「從這裡練」開始一題。</p>
+      </div>
+    </div>
+  </aside>
+  <button type="button" class="panel-tab" id="panelTab" aria-controls="panel" aria-expanded="false">問答</button>
+  <div class="scrim" id="scrim" hidden></div>
+</div>
+
+<!-- 學新主題 -->
+<dialog class="dlg dlg-wide" id="newTopicDialog" aria-labelledby="newTopicTitle">
+  <form method="dialog" class="dlg-x"><button class="icon-btn" value="cancel" aria-label="關閉">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></form>
+  <div class="eyebrow">學新主題</div>
+  <h1 id="newTopicTitle">想學什麼？</h1>
+  <div id="ntStep1" class="nt-step">
+    <form id="ntTopicForm" autocomplete="off">
+      <label class="field">
+        <span class="field-label">主題</span>
+        <input type="text" id="ntTopic" maxlength="60" required placeholder="例如：SQL、日文 N4、樂理入門" autofocus />
+      </label>
+      <p class="fineprint">接下來會問你 3–4 個問題（目標、程度、生活情境、每次時間），用來量身規劃路徑。</p>
+      <div class="form-msg" id="ntMsg1" role="status" aria-live="polite"></div>
+      <div class="row end"><button type="submit" class="btn btn-primary" id="ntNext">下一步</button></div>
+    </form>
+  </div>
+  <div id="ntStep2" class="nt-step" hidden>
+    <form id="ntAnswerForm" autocomplete="off">
+      <div id="ntQuestions"></div>
+      <label class="field">
+        <span class="field-label">其他想讓老師知道的（選填）</span>
+        <textarea id="ntNotes" maxlength="500" rows="2" placeholder="例如：我是零基礎，請新名詞先用白話解釋"></textarea>
+      </label>
+      <div class="form-msg" id="ntMsg2" role="status" aria-live="polite"></div>
+      <div class="row end">
+        <button type="button" class="btn btn-ghost" id="ntBack">上一步</button>
+        <button type="submit" class="btn btn-primary" id="ntPlan">產生學習路徑</button>
+      </div>
+    </form>
+  </div>
+  <div id="ntStep3" class="nt-step" hidden>
+    <div class="planning" role="status" aria-live="polite">
+      <div class="orbit" aria-hidden="true"><div class="orbit-core"></div><div class="orbit-ring r1"><i></i></div><div class="orbit-ring r2"><i></i></div></div>
+      <p class="planning-title">規劃中，約需 1 分鐘</p>
+      <p class="fineprint">強模型正在排出 15–25 個知識節點、先修關係與常見迷思。請不要關閉這個頁面。</p>
+    </div>
+  </div>
+</dialog>
+
+<!-- 覆寫確認 -->
+<dialog class="dlg" id="replanDialog" aria-labelledby="replanTitle">
+  <div class="eyebrow">重新規劃</div>
+  <h1 id="replanTitle">「<span id="replanSlug"></span>」已經有學習路徑了</h1>
+  <p>要用新的規劃覆寫嗎？</p>
+  <ul class="plain">
+    <li><b>保留已學狀態</b>：新路徑裡同名的節點沿用你的熟練度與紀錄。</li>
+    <li><b>完全重來</b>：所有節點從「未學」開始。</li>
+  </ul>
+  <form method="dialog" class="row end">
+    <button class="btn btn-ghost" value="cancel" autofocus>取消</button>
+    <button class="btn btn-ghost danger-text" value="replan_reset">完全重來</button>
+    <button class="btn btn-primary" value="replan_keep">保留已學狀態</button>
+  </form>
+</dialog>
+
+<!-- 刪除主題 -->
+<dialog class="dlg" id="deleteDialog" aria-labelledby="deleteTitle">
+  <div class="eyebrow">刪除主題</div>
+  <h1 id="deleteTitle">刪除「<span id="deleteName"></span>」？</h1>
+  <p>主題會移到 <code>learn-data/.trash/</code>，不會直接消失。請輸入主題代號 <code id="deleteSlugHint"></code> 確認。</p>
+  <form id="deleteForm" autocomplete="off">
+    <label class="field"><span class="field-label">主題代號</span>
+      <input type="text" id="deleteInput" spellcheck="false" autocapitalize="off" /></label>
+    <div class="form-msg" id="deleteMsg" role="status" aria-live="polite"></div>
+    <div class="row end">
+      <button type="button" class="btn btn-ghost" id="deleteCancel" autofocus>取消</button>
+      <button type="submit" class="btn btn-danger" id="deleteOk" disabled>刪除</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 重設進度 -->
+<dialog class="dlg" id="resetDialog" aria-labelledby="resetTitle">
+  <div class="eyebrow">重設進度</div>
+  <h1 id="resetTitle">把「<span id="resetName"></span>」的進度歸零？</h1>
+  <p>所有節點回到「未學」、迷思筆記清空。橋接會先備份成 <code>progress.json.bak</code>。</p>
+  <div class="form-msg" id="resetMsg" role="status" aria-live="polite"></div>
+  <form method="dialog" class="row end" id="resetForm">
+    <button class="btn btn-ghost" value="cancel" autofocus>取消</button>
+    <button class="btn btn-danger" value="reset">重設進度</button>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{
+ "topic_slug": "python-basics",
+ "domain": "code",
+ "questions": [
+  {"id": "goal", "question": "學 Python 主要想拿來做什麼？",
+   "options": [
+    {"label": "自動化工作", "description": "整理 Excel、批次改檔名、定時抓資料"},
+    {"label": "資料分析", "description": "讀表格、算統計、畫圖"},
+    {"label": "準備面試", "description": "能手寫基本語法與小題目"}
+   ]},
+  {"id": "level", "question": "你現在的程度大概是？",
+   "options": [
+    {"label": "完全沒寫過", "description": "沒寫過任何程式"},
+    {"label": "寫過一點別的語言", "description": "例如 Excel 公式、VBA、JS"},
+    {"label": "會一點 Python", "description": "看得懂 for 迴圈與函式"}
+   ]},
+  {"id": "context", "question": "希望例子用哪種生活情境？",
+   "options": [
+    {"label": "工作報表", "description": "訂單、庫存、出勤"},
+    {"label": "日常生活", "description": "記帳、購物清單、行程"},
+    {"label": "遊戲與興趣", "description": "抽卡機率、比賽分數"}
+   ]},
+  {"id": "minutes", "question": "每次大約能練多久？",
+   "options": [
+    {"label": "10 分鐘", "description": "通勤零碎時間"},
+    {"label": "30 分鐘", "description": "下班後一小段"},
+    {"label": "1 小時以上", "description": "週末專心練"}
+   ]}
+ ]
+}

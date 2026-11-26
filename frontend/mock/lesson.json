@@ -1,0 +1,25 @@
+{
+ "question_id": "q-mock-001",
+ "node": "where-basic",
+ "node_name": "WHERE 篩選",
+ "kind": "new",
+ "type": "produce",
+ "lecture": "WHERE 就像 Excel 的「篩選」：只留下符合條件的那幾列。\n\n新名詞：\n・條件：一句會得到「是 / 不是」的比較，例如 city = '桃園'（城市是桃園）。\n・NULL：表格裡的「空白」，代表「還不知道」。它不是空字串，也不是 0。\n\n重點：拿 NULL 去比較（=、<>）時，答案既不是「是」也不是「不是」，而是「不知道」，所以那一列不會被選出來。要找空白，得寫 IS NULL。",
+ "example": "SELECT name, city\nFROM suppliers\nWHERE city = '桃園';",
+ "example_explain": [
+  "SELECT name, city —— 我要看「名稱」和「城市」這兩欄。",
+  "FROM suppliers —— 資料從「供應商」這張表拿。",
+  "WHERE city = '桃園' —— 只留下城市等於「桃園」的那幾列；字串要用單引號包起來。",
+  "最後的分號 ; —— 代表這句 SQL 寫完了。"
+ ],
+ "question": "採購主管想找「評等不是 A」的供應商，連「還沒評鑑」（rating 是空白）的也要一起列出來。請寫一句 SQL，列出這些供應商的 supplier_id、name、rating。",
+ "hint": "rating <> 'A' 不會選到空白的那幾列，空白要另外用 IS NULL 補上，兩個條件用 OR 接起來。",
+ "show_tables": ["suppliers"],
+ "visuals": [
+  {"kind": "diagram", "title": "一列資料怎麼通過 WHERE", "mermaid": "flowchart LR\n  A[一列供應商] --> B{rating 是空白嗎？}\n  B -- 是 --> C[rating <> 'A' 得到「不知道」<br/>這列被丟掉]\n  B -- 否 --> D{rating 等於 A 嗎？}\n  D -- 是 --> E[丟掉]\n  D -- 否 --> F[留下]\n  C -.加上 OR rating IS NULL.-> F"},
+  {"kind": "table", "title": "拿 rating 跟 'A' 比較的三種結果", "columns": ["rating 的值", "rating <> 'A'", "會被選出來嗎"], "rows": [["A", "不是（FALSE）", "不會"], ["B", "是（TRUE）", "會"], ["（空白）", "不知道（UNKNOWN）", "不會"]]}
+ ],
+ "ref_code": "SELECT supplier_id, name, rating\nFROM suppliers\nWHERE rating <> 'A' OR rating IS NULL;",
+ "runner": "sql",
+ "cached_lecture": false
+}

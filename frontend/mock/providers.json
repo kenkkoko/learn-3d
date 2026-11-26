@@ -1,0 +1,9 @@
+{
+ "providers": [
+  {"id": "claude", "name": "Claude Code", "available": true, "reason": null,
+   "models": ["claude-opus-4-1", "claude-sonnet-4-5", "claude-haiku-4-5"], "efforts": ["low", "medium", "high"]},
+  {"id": "codex", "name": "Codex CLI", "available": true, "reason": null,
+   "models": ["gpt-5-codex"], "efforts": ["low", "medium", "high", "xhigh"]},
+  {"id": "ollama", "name": "Ollama", "available": false, "reason": "127.0.0.1:11434 沒有回應", "models": [], "efforts": []}
+ ]
+}
