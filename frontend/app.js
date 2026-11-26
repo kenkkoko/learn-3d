@@ -82,6 +82,12 @@ let sceneMod = null;
 let webgl = true;
 
 const app = $("#app");
+// 版面容器（面板、中間、左欄、整個 app）本來就不該捲動：只有裡面的 .panel-body / 清單會捲。
+// 瀏覽器聚焦某個元素時可能會偷偷捲動 overflow:hidden 的容器，造成「整塊往上跑、下面露出黑色」，這裡一律拉回原位。
+for (const sel of ["#app", "#panel", "#stage", "#sidebar"]) {
+  const el = document.querySelector(sel);
+  el?.addEventListener("scroll", () => { if (el.scrollTop || el.scrollLeft) { el.scrollTop = 0; el.scrollLeft = 0; } });
+}
 const mqMobile = window.matchMedia("(max-width: 767px)");
 const isMobile = () => mqMobile.matches;
 
@@ -1286,7 +1292,7 @@ async function submitAnswer(l, form, ta, confName, msg, submitBtn, result) {
   const conf = form.querySelector(`input[name="${confName}"]:checked`)?.value;
   const answer = ta.value;
   msg.classList.remove("err");
-  if (!conf) { msg.textContent = "請先選把握度：🟢 有把握、🟡 不太確定，或 🔴 用猜的。"; msg.classList.add("err"); form.querySelector(`input[name="${confName}"]`).focus(); return; }
+  if (!conf) { msg.textContent = "請先選把握度：🟢 有把握、🟡 不太確定，或 🔴 用猜的。"; msg.classList.add("err"); form.querySelector(`input[name="${confName}"]`).focus({ preventScroll: true }); return; }
   if (!answer.trim()) { msg.textContent = "還沒寫答案喔。"; msg.classList.add("err"); ta.focus(); return; }
   const limit = Number(ta.getAttribute("maxlength")) || 2000;
   if (answer.length > limit) { msg.textContent = `答案太長了（上限 ${limit} 字）。`; msg.classList.add("err"); return; }
