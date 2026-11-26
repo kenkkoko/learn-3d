@@ -1420,7 +1420,7 @@ $("#ntTopicForm").addEventListener("submit", async (ev) => {
   const msg = $("#ntMsg1");
   msg.classList.remove("err");
   if (!topic) { msg.textContent = "請輸入想學的主題。"; msg.classList.add("err"); return; }
-  if (topic.length > 60) { msg.textContent = "主題最多 60 字。"; msg.classList.add("err"); return; }
+  if (topic.length > 2000) { msg.textContent = "描述最多 2000 字。"; msg.classList.add("err"); return; }
   const btn = $("#ntNext");
   btn.disabled = true;
   msg.replaceChildren(h("span", { class: "spinner", "aria-hidden": "true", style: "margin-right:8px" }), "AI 正在想要問你哪些問題…");
