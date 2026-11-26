@@ -278,6 +278,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         from .version import build_id
         return {"ok": True, "name": "learn3d-bridge", "version": __version__, "build": build_id()}
 
+    @app.get("/usage")
+    def get_usage():
+        """Claude / Codex 訂閱額度（5 小時、每週）的最新狀態，網站左下角即時顯示。"""
+        from . import usage
+        return usage.snapshot()
+
     @app.get("/providers", response_model=ProvidersResponse)
     def get_providers(refresh: str | None = None):
         return ProvidersResponse(providers=providers.detect_providers(refresh=bool(refresh) and refresh != "0"))

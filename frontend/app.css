@@ -595,3 +595,22 @@ select option { background: #141418; }
 .bd-ai li.login::before { color: var(--warn); }
 .bd-ai li.login small { color: var(--muted); }
 .bd-login { margin: 4px 0 4px 17px; }
+
+/* ---- AI 訂閱用量 ---- */
+.bf-usage { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 3px; font-size: 11px; color: var(--muted); }
+.bu-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.ub { display: inline-block; width: 34px; height: 4px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; vertical-align: middle; }
+.ub i { display: block; height: 100%; background: var(--ok); }
+.ub[data-lv="warn"] i { background: var(--warn); }
+.ub[data-lv="full"] i { background: var(--danger); }
+.bd-usage { margin-top: 14px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255,255,255,.03); }
+.bu-prov + .bu-prov { margin-top: 10px; }
+.bu-name { color: var(--ink); font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.bu-name small { color: var(--faint); font-weight: 400; }
+.bu-row { display: grid; grid-template-columns: 96px 1fr 70px auto; align-items: center; gap: 10px; font-size: 12.5px; margin: 4px 0; }
+.bu-row .ub { width: 100%; height: 6px; }
+.bu-label { color: var(--muted); }
+.bu-val { color: var(--ink); font-family: var(--mono); text-align: right; }
+.bu-val[data-lv="warn"] { color: var(--warn); } .bu-val[data-lv="full"] { color: var(--danger); }
+.bu-reset { color: var(--faint); font-size: 12px; white-space: nowrap; }
+.bd-usage .fineprint { margin-top: 8px; }

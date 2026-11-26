@@ -85,6 +85,22 @@ def logged_in() -> bool | None:
     return False
 
 
+def _record_usage(info) -> None:
+    try:
+        from .. import usage
+        usage.record_claude(info)
+    except Exception:  # noqa: BLE001 — 用量只是顯示用，記錄失敗不影響出題
+        pass
+
+
+def _note_call() -> None:
+    try:
+        from .. import usage
+        usage.note_claude_call()
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def friendly_error(msg: str) -> str:
     if _LOGIN_RE.search(msg):
         return f"Claude Code 的登入過期或尚未登入（{msg}）。請在終端機執行 claude，輸入 /login 登入後再試。"
@@ -196,6 +212,10 @@ class ClaudeProvider(LLMProvider):
             # 「aclose(): asynchronous generator is already running」，真正的原因（例如沒登入）就被蓋掉了。
             # 先記下來，讓產生器正常結束後再丟出。
             async for msg in sdk.query(prompt=user, options=options):
+                rle = getattr(sdk, "RateLimitEvent", None)
+                if rle is not None and isinstance(msg, rle):
+                    _record_usage(msg.rate_limit_info)
+                    continue
                 if isinstance(msg, sdk.AssistantMessage):
                     for block in msg.content:
                         if isinstance(block, sdk.TextBlock):
@@ -207,6 +227,7 @@ class ClaudeProvider(LLMProvider):
                         final = msg.result
             if failure is not None:
                 raise ProviderError(friendly_error(failure), retryable=not _LOGIN_RE.search(failure))
+            _note_call()
             return final if final else "".join(texts)
 
         try:

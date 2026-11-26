@@ -168,7 +168,8 @@
   <!-- 常駐左下角：本機橋接（狀態 + 打開安裝 / 啟動 / 測試面板） -->
   <button type="button" class="bridge-fab" id="bridgeBtn" data-state="checking" aria-haspopup="dialog" aria-controls="bridgeDialog">
     <span class="dot" aria-hidden="true"></span>
-    <span class="bf-main"><span class="bf-label">本機橋接</span><span class="bf-txt" id="bridgeBtnText">偵測中…</span></span>
+    <span class="bf-main"><span class="bf-label">本機橋接</span><span class="bf-txt" id="bridgeBtnText">偵測中…</span>
+      <span class="bf-usage" id="bridgeUsage" hidden></span></span>
     <span class="bf-badge" id="bridgeBtnBadge" hidden>有新版</span>
   </button>
 </div>
@@ -187,6 +188,7 @@
     </div>
   </div>
   <ul class="bd-ai" id="bdAi" hidden></ul>
+  <div class="bd-usage" id="bdUsage" hidden></div>
 
   <!-- 有新版本 -->
   <div class="bd-update" id="bdUpdate" hidden>
