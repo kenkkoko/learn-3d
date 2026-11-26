@@ -30,6 +30,12 @@ def files() -> list[tuple[str, Path]]:
         ("Install-Learn-Bridge.bat", ROOT / "windows" / "Install-Learn-Bridge.bat"),
         ("Start-Learn-Bridge.bat", ROOT / "windows" / "Start-Learn-Bridge.bat"),
     ]
+    # 網頁本身也放進去：橋接會在 http://127.0.0.1:8766/ 提供（瀏覽器擋住公開網站連本機時的備援）
+    front = ROOT / "frontend"
+    for p in sorted(front.rglob("*")):
+        rel = p.relative_to(front)
+        if p.is_file() and rel.parts[0] != "downloads":
+            out.append(("frontend/" + rel.as_posix(), p))
     pkg = ROOT / "src" / "learn3d"
     for p in sorted(pkg.rglob("*")):
         if p.is_file() and "__pycache__" not in p.parts and p.suffix in {".py", ".txt", ".typed"}:

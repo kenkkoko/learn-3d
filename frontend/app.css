@@ -519,3 +519,14 @@ select option { background: #141418; }
 @media (max-width: 767px) { .panel-tabs { min-width: 0; padding: 8px 16px 0; } }
 
 .side-launch { margin: 8px 0 4px; }
+
+/* 常駐「本機橋接」按鈕（星雲左下角） */
+.bridge-pill { position: absolute; left: 16px; bottom: 16px; z-index: 7; display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: rgba(14,14,18,.88);
+  color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.bridge-pill:hover { border-color: rgba(255,255,255,.3); }
+.bridge-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.bridge-pill[data-state="ok"] .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.bridge-pill[data-state="off"] .dot, .bridge-pill[data-state="lost"] .dot { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+.bridge-pill[data-state="mock"] .dot { background: var(--accent); }
+@media (max-width: 767px) { .bridge-pill { left: 12px; bottom: 12px; font-size: 12px; } }

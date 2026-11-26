@@ -62,7 +62,9 @@ popd
 echo  3/3 Registering learn3d-bridge:// so the website can start the bridge
 reg add "HKCU\Software\Classes\learn3d-bridge" /ve /d "URL:Learn 3D Bridge" /f >nul
 reg add "HKCU\Software\Classes\learn3d-bridge" /v "URL Protocol" /d "" /f >nul
-reg add "HKCU\Software\Classes\learn3d-bridge\shell\open\command" /ve /d "\"%TARGET%\Start-Learn-Bridge.bat\" \"%%1\"" /f >nul
+rem Chrome will not launch a link whose handler is a .bat file ("no registered handler"),
+rem so the handler is cmd.exe, which then runs the .bat.
+reg add "HKCU\Software\Classes\learn3d-bridge\shell\open\command" /ve /d "\"%SystemRoot%\System32\cmd.exe\" /c \"\"%TARGET%\Start-Learn-Bridge.bat\" \"%%1\"\"" /f >nul
 
 echo.
 echo  Done. From now on press "Start bridge" on learn.hellokai07.com.

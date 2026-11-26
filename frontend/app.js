@@ -96,6 +96,12 @@ function setBridgeStatus(kind, text) {
   $("#mockBadge").hidden = getMode() !== "mock";
   // 沒連上橋接時，左下角一直有「啟動橋接」
   $("#sideLaunch").hidden = !(kind === "off" || kind === "lost");
+  const pill = $("#bridgePill");
+  pill.dataset.state = kind;
+  $(".txt", pill).textContent = kind === "ok" ? "本機橋接：已連線"
+    : kind === "checking" ? "本機橋接：偵測中…"
+    : kind === "mock" ? "本機橋接：示範模式" : "本機橋接：未連線 · 按這裡啟動";
+  $("#launchBridge").hidden = kind === "ok";
 }
 
 function showBridgeCard(variant) {
@@ -108,8 +114,12 @@ function showBridgeCard(variant) {
     note.textContent = "瀏覽器會詢問是否允許這個網站連到本機（127.0.0.1）。按「連線到本機橋接」後請選允許；在那之前先用示範資料瀏覽。";
     retry.textContent = "連線到本機橋接";
   } else if (variant === "denied") {
-    title.textContent = "瀏覽器封鎖了本機連線";
-    note.textContent = "請到網址列左側的「網站設定」，把「本機網路存取（Loopback network）」改成允許，再按重新偵測。現在先用示範資料瀏覽。";
+    title.textContent = "瀏覽器擋住了連到本機橋接";
+    note.textContent = "按網址列左邊的圖示 →「網站設定」→ 把「本機網路存取」（Local network access）改成「允許」，回來重新整理。不想改設定的話，按「開啟本機版」直接用橋接提供的網頁（http://127.0.0.1:8766/）。";
+    retry.textContent = "重新偵測";
+  } else if (variant === "ok") {
+    title.textContent = "本機橋接已連線";
+    note.textContent = "出題與判定會使用你電腦上的 AI。關掉橋接視窗就會停止。";
     retry.textContent = "重新偵測";
   } else {
     title.textContent = "還沒偵測到本機橋接";
@@ -1529,26 +1539,48 @@ $("#retryBridge").addEventListener("click", async () => {
 // 「啟動橋接」：透過安裝時註冊的 learn3d-bridge:// 連結打開本機橋接，再等它回應。
 // 瀏覽器不能直接啟動電腦裡的程式，所以第一次要先執行安裝檔註冊這個連結（SmartDCA 同樣做法）。
 let launching = false;
-async function launchBridge(btn) {
+async function launchBridge() {
   if (launching) return;
+  // 1) 本機網路權限被拒：連得上也收不到回應，不要空轉，直接說怎麼開
+  const perm = await loopbackPermission();
+  if (perm === "denied") {
+    window.location.href = "learn3d-bridge://start";   // 橋接照樣啟動，給「開啟本機版」用
+    showBridgeCard("denied");
+    toast("瀏覽器擋住了本機連線：照卡片上的步驟允許，或按「開啟本機版」", true);
+    return;
+  }
   launching = true;
   const buttons = [$("#launchBridge"), $("#sideLaunch")];
-  buttons.forEach((b) => { b.disabled = true; b.dataset.label ??= b.textContent; b.textContent = "啟動中…"; });
+  const setLabel = (t) => buttons.forEach((b) => { b.textContent = t; });
+  buttons.forEach((b) => { b.disabled = true; b.dataset.label ??= b.textContent; });
+  setLabel("啟動中…");
+  if (perm === "prompt") toast("瀏覽器會詢問是否允許存取本機網路，請按「允許」");
   window.location.href = "learn3d-bridge://start";
   let ok = false;
-  for (let i = 0; i < 40 && !ok; i++) {      // 最多約 2 分鐘（剛安裝完第一次會比較久）
+  const t0 = Date.now();
+  for (let i = 0; i < 30 && !ok; i++) {      // 最多約 90 秒（剛安裝完第一次會比較久）
     await new Promise((r) => setTimeout(r, 3000));
     ok = (await probeBridge()).ok;
+    setLabel(`等待橋接…${Math.round((Date.now() - t0) / 1000)} 秒`);
+    if (!ok && (await loopbackPermission()) === "denied") break;   // 使用者在詢問裡按了封鎖
     if (i === 3 && !ok) {
-      // 約 12 秒還沒反應：多半是還沒安裝，直接把安裝步驟秀出來
       showBridgeCard("off");
       toast("還沒反應？第一次使用請先下載並執行 Install-Learn-Bridge.bat（只要一次）", true);
     }
   }
   buttons.forEach((b) => { b.disabled = false; b.textContent = b.dataset.label; });
   launching = false;
-  if (ok) { await detectBridge({ userGesture: true }); await onBridgeReady(); }
+  if (ok) { await detectBridge({ userGesture: true }); await onBridgeReady(); return; }
+  showBridgeCard((await loopbackPermission()) === "denied" ? "denied" : "off");
 }
+
+// 永遠看得到的「本機橋接」按鈕：隨時叫出橋接面板（不用重新整理）
+$("#bridgePill").addEventListener("click", () => {
+  const s = state.bridge;
+  showBridgeCard(s === "ok" ? "ok" : s === "mock" ? "off" : (s === "off" && $("#bridgeStatus .txt").textContent.includes("封鎖")) ? "denied" : "off");
+  $("#bridgeCard").scrollIntoView({ block: "nearest" });
+  $("#launchBridge").focus({ preventScroll: true });
+});
 $("#launchBridge").addEventListener("click", (ev) => launchBridge(ev.currentTarget));
 $("#sideLaunch").addEventListener("click", (ev) => launchBridge(ev.currentTarget));
 

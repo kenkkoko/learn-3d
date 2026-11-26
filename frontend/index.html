@@ -78,6 +78,9 @@
 
   <!-- 中間：學習路徑 + 星雲 -->
   <main class="stage" id="stage">
+    <button type="button" class="bridge-pill" id="bridgePill" data-state="checking" aria-controls="bridgeCard">
+      <span class="dot" aria-hidden="true"></span><span class="txt">本機橋接：偵測中…</span>
+    </button>
     <section class="bridge-card" id="bridgeCard" hidden aria-labelledby="bridgeCardTitle">
       <div class="eyebrow">本機橋接</div>
       <h2 id="bridgeCardTitle">還沒偵測到本機橋接</h2>
@@ -94,6 +97,7 @@
       <div class="row">
         <button type="button" class="btn btn-primary" id="launchBridge">啟動橋接</button>
         <a class="btn btn-ghost" href="downloads/learn3d-bridge.zip" download>下載橋接</a>
+        <a class="btn btn-ghost" href="http://127.0.0.1:8766/" target="_blank" rel="noopener">開啟本機版</a>
         <button type="button" class="btn btn-ghost" id="retryBridge">重新偵測</button>
         <button type="button" class="btn btn-ghost" id="dismissBridgeCard">先看示範</button>
       </div>
