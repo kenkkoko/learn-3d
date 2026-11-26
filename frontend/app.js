@@ -151,7 +151,9 @@ function renderBridgeUi() {
   $("#bdUpdate").hidden = !bridgeUi.update;
   if (bridgeUi.update) {
     $("#updateBridgeBtn").hidden = !bridgeUi.update.canAuto;
-    $("#bdUpdateText").textContent = bridgeUi.update.canAuto
+    $("#bdUpdateText").textContent = bridgeUi.update.git
+      ? "你現在跑的是 learn-3d 資料夾（git）裡的開發版橋接，一鍵更新不會動它：請在那個資料夾執行 git pull，然後關掉橋接視窗、重新啟動（uv run learn3d-bridge）。"
+      : bridgeUi.update.canAuto
       ? "網站更新了，你電腦上的橋接還是舊版，部分功能可能出錯（例如「想學什麼」送出失敗）。按「一鍵更新」會自動下載新版、替換並重新啟動（約 1 分鐘）。"
       : "你的橋接是較早的版本，不支援一鍵更新：請下載新版，解壓縮後再執行一次 Install-Learn-Bridge.bat（會覆蓋舊版）。";
   }
@@ -1876,7 +1878,7 @@ async function checkBridgeUpdate(info) {
   const want = await expectedBuild();
   const had = !!bridgeUi.update;
   // 沒有 build 欄位＝更新功能出現之前安裝的橋接：它的啟動檔不認得 update，只能手動重新安裝
-  bridgeUi.update = (!want || !info || info.build === want) ? null : { canAuto: !!info.build };
+  bridgeUi.update = (!want || !info || info.build === want) ? null : { canAuto: !!info.build && info.kind !== "git", git: info.kind === "git" };
   renderBridgeUi();
   if (bridgeUi.update && !had) toast("本機橋接有新版本：按左下角「本機橋接」更新");
 }

@@ -45,12 +45,13 @@ if errorlevel 1 (
 )
 
 set "TARGET=%LOCALAPPDATA%\Learn3D\bridge"
+rem /IS /IT: always overwrite, even files robocopy thinks are the same (zip files share one timestamp)
 rem A bridge that is still running would keep serving the old version after the copy
 echo  Stopping a running Learn 3D bridge, if any ...
 powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('python.exe','pythonw.exe','uv.exe','learn3d-bridge.exe') -and $_.CommandLine -match 'learn3d' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }" >nul 2>nul
 echo  1/3 Copying files to %TARGET%
 if not exist "%TARGET%" mkdir "%TARGET%"
-robocopy "%~dp0." "%TARGET%" /E /NFL /NDL /NJH /NJS /NP /XD .venv __pycache__ /XF bridge.log >nul
+robocopy "%~dp0." "%TARGET%" /E /IS /IT /NFL /NDL /NJH /NJS /NP /XD .venv __pycache__ /XF bridge.log >nul
 if errorlevel 8 (
   echo  [!] Copy failed.
   pause

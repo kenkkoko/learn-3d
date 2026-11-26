@@ -276,7 +276,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/health")
     def health():
         from .version import build_id
-        return {"ok": True, "name": "learn3d-bridge", "version": __version__, "build": build_id()}
+        from pathlib import Path as _P
+        # 從 git 資料夾直接跑的開發版不能「一鍵更新」（要 git pull），網站據此顯示不同的說明
+        kind = "git" if (_P(__file__).resolve().parents[2] / ".git").exists() else "installed"
+        return {"ok": True, "name": "learn3d-bridge", "version": __version__, "build": build_id(), "kind": kind}
 
     @app.get("/usage")
     def get_usage():
