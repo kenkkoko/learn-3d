@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 import zipfile
 from pathlib import Path
@@ -43,7 +44,21 @@ def files() -> list[tuple[str, Path]]:
     return out
 
 
+VERSION_FILE = ROOT / "frontend" / "bridge-version.json"
+
+
+def write_version_file() -> str:
+    """網站上的「最新橋接指紋」：網站拿它和使用者橋接 /health 回報的 build 比對。"""
+    sys.path.insert(0, str(ROOT / "src"))
+    from learn3d.version import source_hash
+    h = source_hash(ROOT / "src" / "learn3d")
+    VERSION_FILE.write_bytes((json.dumps({"build": h}) + "\n").encode("utf-8"))
+    return h
+
+
 def build(out: Path = OUT) -> Path:
+    if out == OUT:
+        write_version_file()  # 先寫指紋（它也在 frontend/ 裡，會一起打包）
     out.parent.mkdir(parents=True, exist_ok=True)
     tmp = out.with_suffix(".zip.tmp")
     with zipfile.ZipFile(tmp, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as z:

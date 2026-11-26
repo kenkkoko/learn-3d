@@ -154,6 +154,7 @@ async function detectBridge({ userGesture = false } = {}) {
     useBridge();
     $("#bridgeCard").hidden = true;
     setBridgeStatus("ok", "橋接已連線");
+    checkBridgeUpdate(r.info);
   } else {
     useMock();
     setBridgeStatus("off", "未偵測到橋接（示範資料）");
@@ -1672,6 +1673,56 @@ async function launchBridge() {
   if (ok) { await detectBridge({ userGesture: true }); await onBridgeReady(); return; }
   showBridgeCard((await loopbackPermission()) === "denied" ? "denied" : "off");
 }
+
+// ======================================================================
+// 橋接版本檢查：網站上的 bridge-version.json（打包時產生）vs 橋接 /health 回報的 build 指紋
+// ======================================================================
+let latestBuild;   // undefined＝還沒讀；null＝讀不到（不提示）
+async function expectedBuild() {
+  if (latestBuild !== undefined) return latestBuild;
+  try {
+    const r = await fetch(new URL("bridge-version.json", location.href), { cache: "no-store" });
+    latestBuild = r.ok ? (await r.json()).build || null : null;
+  } catch { latestBuild = null; }
+  return latestBuild;
+}
+async function checkBridgeUpdate(info) {
+  const want = await expectedBuild();
+  const box = $("#bridgeUpdate");
+  if (!want || !info || info.build === want) { box.hidden = true; return; }
+  // 沒有 build 欄位＝更新功能出現之前安裝的橋接：它的啟動檔不認得 update，只能手動重新安裝
+  const canAuto = !!info.build;
+  $("#updateBridgeBtn").hidden = !canAuto;
+  $("#bridgeUpdateText").textContent = canAuto
+    ? "網站更新了，你電腦上的橋接還是舊版。按下面的按鈕會自動下載新版、替換並重新啟動（約 1 分鐘）。"
+    : "你的橋接是較早的版本，不支援一鍵更新：請下載新版，解壓縮後再執行一次 Install-Learn-Bridge.bat（會覆蓋舊版）。";
+  if (box.hidden) toast("本機橋接有新版本，左下角可以更新");
+  box.hidden = false;
+}
+$("#updateBridgeBtn").addEventListener("click", async (ev) => {
+  const btn = ev.currentTarget;
+  btn.disabled = true;
+  btn.textContent = "更新中…";
+  window.location.href = "learn3d-bridge://update";
+  const want = await expectedBuild();
+  let done = false;
+  for (let i = 0; i < 60 && !done; i++) {      // 最多約 3 分鐘（下載 + 重新安裝套件）
+    await new Promise((r) => setTimeout(r, 3000));
+    const r = await probeBridge();
+    done = r.ok && r.info?.build === want;
+    btn.textContent = `更新中…${(i + 1) * 3} 秒`;
+  }
+  btn.disabled = false;
+  btn.textContent = "一鍵更新橋接";
+  if (done) {
+    $("#bridgeUpdate").hidden = true;
+    toast("橋接已更新到最新版");
+    await detectBridge({ userGesture: true });
+    await loadProviders();
+  } else {
+    toast("更新沒有完成：可以改用手動下載，重新執行 Install-Learn-Bridge.bat", true);
+  }
+});
 
 // 永遠看得到的「本機橋接」按鈕：隨時叫出橋接面板（不用重新整理）
 $("#bridgePill").addEventListener("click", () => {

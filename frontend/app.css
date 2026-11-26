@@ -559,3 +559,9 @@ select option { background: #141418; }
 .pv.compact .pv-bar { width: 100%; }
 .pv-fill { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), #ffd8b5); transition: width .25s linear; }
 .pv-time { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+
+/* 橋接有新版本 */
+.bridge-update { margin: 8px 0 4px; padding: 12px; border-radius: 12px; border: 1px solid rgba(240,164,106,.45); background: var(--accent-soft); display: grid; gap: 8px; }
+.bu-title { margin: 0; font-size: 13px; font-weight: 600; color: var(--accent); }
+.bu-text { margin: 0; font-size: 12px; line-height: 1.6; color: var(--text); }
+.bridge-update .text-btn { justify-self: start; padding: 0; text-decoration: underline; }

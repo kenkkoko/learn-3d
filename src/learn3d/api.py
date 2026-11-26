@@ -268,7 +268,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # ----- 基本 -----
     @app.get("/health")
     def health():
-        return {"ok": True, "name": "learn3d-bridge", "version": __version__}
+        from .version import build_id
+        return {"ok": True, "name": "learn3d-bridge", "version": __version__, "build": build_id()}
 
     @app.get("/providers", response_model=ProvidersResponse)
     def get_providers(refresh: str | None = None):

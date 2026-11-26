@@ -56,6 +56,12 @@
         <span class="dot" aria-hidden="true"></span><span class="txt">偵測橋接中…</span>
       </div>
       <button type="button" class="btn btn-primary wide side-launch" id="sideLaunch" hidden>啟動橋接</button>
+      <div class="bridge-update" id="bridgeUpdate" hidden role="status">
+        <p class="bu-title">橋接有新版本</p>
+        <p class="bu-text" id="bridgeUpdateText">網站更新了，你電腦上的橋接還是舊版，部分功能可能無法使用。</p>
+        <button type="button" class="btn btn-primary wide" id="updateBridgeBtn">一鍵更新橋接</button>
+        <a class="text-btn" href="downloads/learn3d-bridge.zip" download>或手動下載，重新執行 Install-Learn-Bridge.bat</a>
+      </div>
       <details class="ai-settings" id="aiSettings">
         <summary>AI 設定</summary>
         <div class="ai-group" data-role="plan">

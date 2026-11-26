@@ -35,3 +35,18 @@ def test_bat_is_ascii_with_crlf():
     data = zipfile.ZipFile(ZIP).read("learn3d-bridge/Start-Learn-Bridge.bat")
     data.decode("ascii")  # cmd 在部分系統會讀錯 UTF-8 批次檔
     assert b"\r\n" in data and b"\n" not in data.replace(b"\r\n", b"")
+
+
+def test_version_file_matches_source():
+    """網站上的 bridge-version.json 必須等於目前程式的指紋（重新打包時會自動更新）。"""
+    import json
+    import sys
+    sys.path.insert(0, str(ROOT / "src"))
+    from learn3d.version import source_hash
+    data = json.loads((ROOT / "frontend" / "bridge-version.json").read_text(encoding="utf-8"))
+    assert data["build"] == source_hash(ROOT / "src" / "learn3d"), "請執行 uv run python scripts/build_bridge_zip.py"
+
+
+def test_health_reports_build(client):
+    from learn3d.version import build_id
+    assert client.get("/health").json()["build"] == build_id()
