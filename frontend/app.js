@@ -798,12 +798,18 @@ async function startLesson(req = {}, trigger) {
   state.lastReq = req;
   const topic = state.topic;
   setPanelHead(req.review ? "複習" : "一問一答", "出題中…");
-  qa.replaceChildren(h("div", { class: "loading", role: "status" }, h("span", { class: "spinner", "aria-hidden": "true" }),
-    req.review ? "正在挑一則到期的迷思、換個情境出題…" : "正在準備短講和題目，通常需要 10–40 秒…"));
+  const nodeName = state.progress?.nodes?.find((n) => n.id === (req.node || state.progress?.current))?.name;
+  const pv = req.review
+    ? progressView({ task: "review", title: "正在準備複習題", center: "迷思複習",
+        steps: ["找出今天到期的迷思", "換一個沒用過的情境", "AI 撰寫複習題", "檢查格式與評分標準"] })
+    : progressView({ task: "lesson", title: "正在準備這一題", center: req.node ? nodeName : null,
+        steps: ["讀取這個節點的進度與迷思", "挑選這次的題型", "AI 撰寫白話短講與題目", "檢查格式與評分標準"] });
+  qa.replaceChildren(pv.el);
   qa.scrollTop = 0;
   let lesson;
   try {
-    lesson = await api.lesson(topic, { node: req.node || null, review: !!req.review, ai: aiChoice("daily") });
+    lesson = await pv.run(api.lesson(topic, { node: req.node || null, review: !!req.review, ai: aiChoice("daily") }),
+      0, 4, [0.06, 0.06, 0.68, 0.2]);
   } catch (e) {
     if (state.topic !== topic) return;
     setPanelHead("一問一答", "出題失敗");
@@ -821,6 +827,84 @@ async function startLesson(req = {}, trigger) {
     renderTopic(false);
   }
   renderLesson(lesson);
+}
+
+// ======================================================================
+// 等待進度（仿 creativity-3d：軌道動畫 + 步驟清單），加上已等秒數與依實際紀錄調整的預估
+// ======================================================================
+const DUR_KEY = "learn3d.durations";
+const DUR_DEFAULT = { lesson: 15, review: 12, grade: 5, plan: 70 };
+function estSec(task) {
+  try { return JSON.parse(localStorage.getItem(DUR_KEY) || "{}")[task] || DUR_DEFAULT[task] || 15; }
+  catch { return DUR_DEFAULT[task] || 15; }
+}
+function recordSec(task, sec) {
+  try {
+    const d = JSON.parse(localStorage.getItem(DUR_KEY) || "{}");
+    d[task] = d[task] ? Math.round((d[task] * 0.6 + sec * 0.4) * 10) / 10 : Math.round(sec * 10) / 10;
+    localStorage.setItem(DUR_KEY, JSON.stringify(d));
+  } catch { /* 無痕模式：只是不記住 */ }
+}
+
+/**
+ * @param {{task:string, title?:string, center?:string, steps:string[], compact?:boolean}} o
+ * run(promise, from, to, weights)：等待期間依預估時間把 [from, to) 的步驟逐一點亮（weights＝各步驟佔的時間比例）
+ */
+function progressView({ task, title, center, steps, compact = false }) {
+  const items = steps.map((s) => h("li", null, s));
+  const fill = h("span", { class: "pv-fill" });
+  const time = h("div", { class: "pv-time" });
+  const el = h("div", { class: `pv${compact ? " compact" : ""}`, role: "status", "aria-live": "polite" },
+    compact ? null : h("div", { class: "orbit pv-orbit", "aria-hidden": "true" },
+      h("div", { class: "orbit-core" }),
+      h("div", { class: "orbit-ring r1" }, h("i")), h("div", { class: "orbit-ring r2" }, h("i")), h("div", { class: "orbit-ring r3" }, h("i"))),
+    center && !compact ? h("div", { class: "pv-center", text: center }) : null,
+    title ? h("p", { class: "pv-title", text: title }) : null,
+    h("ol", { class: "pv-steps" }, items),
+    h("div", { class: "pv-bar", "aria-hidden": "true" }, fill),
+    time);
+  const t0 = performance.now();
+  const est = estSec(task);
+  let cur = -1, timer = null;
+  const set = (i) => {
+    if (i === cur) return;
+    items.forEach((li, k) => { li.classList.toggle("done", k < i); li.classList.toggle("active", k === i); });
+    cur = i;
+  };
+  const elapsed = () => (performance.now() - t0) / 1000;
+  const tick = () => {
+    const t = elapsed();
+    const p = t <= est ? (t / est) * 0.9 : 0.9 + 0.08 * (1 - Math.exp(-(t - est) / est));
+    fill.style.width = `${Math.round(p * 100)}%`;
+    time.textContent = t <= est ? `已等 ${Math.round(t)} 秒 · 預估約 ${Math.round(est)} 秒`
+      : `已等 ${Math.round(t)} 秒 · 比平常久一點，AI 還在寫…`;
+  };
+  tick();
+  return {
+    el,
+    step: set,
+    async run(promise, from, to, weights) {
+      const w = weights || Array(to - from).fill(1);
+      const total = w.reduce((a, b) => a + b, 0);
+      const bounds = w.map((_, k) => w.slice(0, k + 1).reduce((a, b) => a + b, 0) / total);  // 每步結束的時間比例
+      set(from);
+      timer = setInterval(() => {
+        tick();
+        const r = elapsed() / est;
+        const k = bounds.findIndex((b) => r < b);
+        set(from + (k === -1 ? w.length - 1 : k));                // 超過預估就停在最後一步，等真正完成
+      }, 250);
+      try {
+        const v = await promise;
+        recordSec(task, elapsed());
+        set(items.length);
+        fill.style.width = "100%";
+        time.textContent = `完成，用了 ${Math.round(elapsed())} 秒`;
+        return v;
+      } finally { clearInterval(timer); }
+    },
+    stop() { clearInterval(timer); },
+  };
 }
 
 function sec(title, ...kids) {
@@ -1166,9 +1250,15 @@ async function submitAnswer(l, form, ta, confName, msg, submitBtn, result) {
   };
   result.replaceChildren();
   const runner = lessonRunner(l);
+  const willExec = !!(runner && l.ref_code && (l.type === "produce" || l.type === "debug" || l.type === "predict"));
+  const gpv = progressView({ task: "grade", compact: true, steps: [
+    ...(willExec ? [l.type === "predict" ? "執行參考程式，取得真正的輸出" : "在瀏覽器執行你的程式和參考答案"] : []),
+    "對照評分標準", "AI 判斷對錯與迷思", "計分、更新迷思筆記"] });
+  result.replaceChildren(gpv.el);
   let execRes = null;
-  if (runner && l.ref_code && (l.type === "produce" || l.type === "debug" || l.type === "predict")) {
-    setBusy(true, l.type === "predict" ? "執行參考程式，取得真正的輸出…" : "在瀏覽器執行你的程式和參考答案…");
+  if (willExec) {
+    gpv.step(0);
+    setBusy(true, "");
     try {
       const seed = runner === "sql" ? await envFor(state.topic) : null;
       execRes = await buildExec({ runner, type: l.type, answer, refCode: l.ref_code, question: l.question, seed });
@@ -1177,13 +1267,15 @@ async function submitAnswer(l, form, ta, confName, msg, submitBtn, result) {
       execRes = null;
     }
   }
-  setBusy(true, execRes?.exec?.equal ? "結果和參考答案相同，記錄中…" : "判定中…");
+  setBusy(true, execRes?.exec?.equal ? "結果和參考答案相同，不用問 AI，直接記錄" : "");
   const req = { question_id: l.question_id, confidence: conf, answer, ai: aiChoice("daily") };
   if (execRes?.exec) req.exec = execRes.exec;
   let res;
+  const g0 = willExec ? 1 : 0;
   try {
-    res = await api.grade(state.topic, req);
+    res = await gpv.run(api.grade(state.topic, req), g0, g0 + 3, [0.1, 0.75, 0.15]);
   } catch (e) {
+    gpv.stop();
     setBusy(false);
     result.replaceChildren(h("div", { class: "notice err", role: "alert" }, e.status === 503 ? FALLBACK_MSG : errMsg(e)),
       h("div", { class: "v-actions" }, h("button", { type: "button", class: "btn btn-primary", onclick: () => form.requestSubmit() }, "重試")));
@@ -1392,8 +1484,11 @@ $("#ntAnswerForm").addEventListener("submit", async (ev) => {
 async function runPlan(req) {
   nt.planning = true;
   ntStep(3);
+  const ppv = progressView({ task: "plan", title: "正在規劃你的學習路徑", center: req.topic, steps: [
+    "分析你的目標與程度", "設計 15–25 個知識節點", "安排先修關係與常見迷思", "建立練習環境", "檢查學習地圖"] });
+  $("#planProgress").replaceChildren(ppv.el);
   try {
-    const res = await api.plan(req);
+    const res = await ppv.run(api.plan(req), 0, 5, [0.1, 0.4, 0.25, 0.15, 0.1]);
     nt.planning = false;
     ntDialog.close();
     toast("學習路徑完成！");

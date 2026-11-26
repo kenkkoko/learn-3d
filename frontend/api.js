@@ -100,6 +100,9 @@ async function mockJson(name) {
 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/** 示範資料依主題分檔：英文範例用 *-en.json，SQL 範例用原本的檔名 */
+const mockName = (base, topic) => (topic === "english-demo" ? `${base}-en` : base);
+
 async function mockRoute(method, path, body) {
   await wait(120);
   if (path === "/health") return { ok: true, name: "learn3d-bridge", version: "mock" };
@@ -118,13 +121,14 @@ async function mockRoute(method, path, body) {
     if (topics.topics.some((t) => t.topic === body.slug) && !body.confirm) {
       throw new ApiError("這個主題已經有學習路徑了，要覆寫嗎？", { status: 409, needsConfirm: true });
     }
-    await wait(1800);
-    const progress = await mockJson("progress");
-    return { topic: "sql-demo", progress };
+    await wait(4000);
+    const en = /英|english|toeic|多益/i.test(body.topic || "");
+    const progress = await mockJson(en ? "progress-en" : "progress");
+    return { topic: en ? "english-demo" : "sql-demo", progress };
   }
   if (/^\/topics\/[a-z0-9-]+\/journal(\?|$)/.test(path)) {
     const q = new URLSearchParams(path.split("?")[1] || "");
-    const all = (await mockJson("journal")).entries;
+    const all = (await mockJson(mockName("journal", path.split("/")[2]))).entries;
     let rows = q.get("node") ? all.filter((e) => e.node === q.get("node")) : all;
     if (q.get("before")) rows = rows.slice(rows.findIndex((e) => e.id === q.get("before")) + 1);
     const limit = Number(q.get("limit") || 30);
@@ -132,24 +136,25 @@ async function mockRoute(method, path, body) {
   }
   const m = path.match(/^\/topics\/([a-z0-9-]+)(\/[a-z]+)?$/);
   if (m) {
-    const [, , sub] = m;
-    if (!sub && method === "GET") return mockJson("progress");
+    const [, t, sub] = m;
+    if (!sub && method === "GET") return mockJson(mockName("progress", t));
     if (!sub && method === "DELETE") return { ok: true };
-    if (sub === "/env") return mockJson("env");
+    if (sub === "/env") return t === "english-demo" ? { runner: null, sql: null } : mockJson("env");
     if (sub === "/lesson") {
-      await wait(700);
-      const l = await mockJson("lesson");
+      await wait(2500);                       // 示範也讓人看得到出題進度
+      const l = await mockJson(mockName("lesson", t));
       if (body?.node) l.node = body.node;
       if (body?.review) l.kind = "review";
       return l;
     }
     if (sub === "/grade") {
-      await wait(700);
-      const g = await mockJson("grade");
+      await wait(1500);
+      const g = await mockJson(mockName("grade", t));
       if (body.answer.trim().length < 3) {
         return { ...g.wrong, result: "unjudgeable", feedback: "答案太短，看不出你的想法。請用自己的話多寫一點。", danger: false, delta: 0, misconception_label: null, offtopic: true };
       }
       if (body.exec?.equal) return g.ok;
+      if (g.ok_pattern && new RegExp(g.ok_pattern, "i").test(body.answer)) return g.ok;   // 沒有程式可執行的主題（英文）
       const r = { ...g.wrong };
       r.danger = body.confidence === "high";
       r.delta = body.confidence === "high" ? -2 : -1;
@@ -157,7 +162,7 @@ async function mockRoute(method, path, body) {
     }
     if (sub === "/jump") return { current: body.node };
     if (sub === "/reset") {
-      const p = await mockJson("progress");
+      const p = await mockJson(mockName("progress", t));
       p.nodes.forEach((n) => { n.status = "unseen"; n.score = 0; n.history = []; });
       p.misconceptions = [];
       return { progress: p };

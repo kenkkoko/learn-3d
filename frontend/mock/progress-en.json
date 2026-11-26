@@ -1,0 +1,433 @@
+{
+ "version": 1,
+ "topic": "english-demo",
+ "title": "英文文法（範例）：多益 Part 5 常考句型",
+ "domain": "language",
+ "runner": null,
+ "created": "2026-11-20",
+ "learner": {
+  "goal": "多益 Part 5 拿分、看懂英文工作信",
+  "level": "看得懂簡單句子，文法常搞混",
+  "context": "辦公室日常：報告、會議、出差、電子郵件",
+  "minutes": 15,
+  "notes": "每題附中文翻譯；講文法先講「看到什麼線索就選什麼」，不背術語"
+ },
+ "envNote": null,
+ "current": "passive-voice",
+ "nodes": [
+  {
+   "id": "parts-of-speech",
+   "name": "詞性與句子骨架",
+   "layer": 1,
+   "prereqs": [],
+   "summary": "能分出名詞、動詞、形容詞、副詞，找到句子的主詞和動詞",
+   "pitfalls": [
+    "以為字尾 -ly 一定是副詞（friendly 是形容詞）",
+    "找不到真正的主要動詞"
+   ],
+   "status": "mastered",
+   "score": 5,
+   "lastSeen": "2026-11-26",
+   "history": [
+    {
+     "date": "2026-11-26",
+     "type": "explain",
+     "confidence": "high",
+     "result": "ok"
+    },
+    {
+     "date": "2026-11-26",
+     "type": "predict",
+     "confidence": "mid",
+     "result": "ok"
+    },
+    {
+     "date": "2026-11-26",
+     "type": "debug",
+     "confidence": "high",
+     "result": "ok"
+    }
+   ]
+  },
+  {
+   "id": "word-position",
+   "name": "空格該填什麼詞性",
+   "layer": 2,
+   "prereqs": [
+    "parts-of-speech"
+   ],
+   "summary": "看空格前後的字，判斷要填名詞、形容詞還是副詞",
+   "pitfalls": [
+    "the + ___ + of 卻填形容詞",
+    "複合名詞 application form 誤以為要形容詞"
+   ],
+   "status": "shaky",
+   "score": 3,
+   "lastSeen": "2026-11-26",
+   "history": [
+    {
+     "date": "2026-11-26",
+     "type": "predict",
+     "confidence": "mid",
+     "result": "ok"
+    },
+    {
+     "date": "2026-11-26",
+     "type": "debug",
+     "confidence": "mid",
+     "result": "partial"
+    }
+   ]
+  },
+  {
+   "id": "subject-verb",
+   "name": "主詞與動詞一致",
+   "layer": 2,
+   "prereqs": [
+    "parts-of-speech"
+   ],
+   "summary": "能依主詞單複數選對動詞（each / every 接單數）",
+   "pitfalls": [
+    "被中間的介系詞片語騙（The list of items are）",
+    "everyone 當成複數"
+   ],
+   "status": "shaky",
+   "score": 2,
+   "lastSeen": "2026-11-26",
+   "history": [
+    {
+     "date": "2026-11-26",
+     "type": "debug",
+     "confidence": "low",
+     "result": "ok"
+    }
+   ]
+  },
+  {
+   "id": "simple-tenses",
+   "name": "現在式與過去式",
+   "layer": 2,
+   "prereqs": [
+    "parts-of-speech"
+   ],
+   "summary": "看到 yesterday、last week 用過去式，習慣用現在式",
+   "pitfalls": [
+    "看到時間詞卻沒改時態",
+    "過去式不規則動詞拼錯（goed）"
+   ],
+   "status": "mastered",
+   "score": 5,
+   "lastSeen": "2026-11-26",
+   "history": [
+    {
+     "date": "2026-11-26",
+     "type": "produce",
+     "confidence": "high",
+     "result": "ok"
+    },
+    {
+     "date": "2026-11-26",
+     "type": "predict",
+     "confidence": "high",
+     "result": "ok"
+    },
+    {
+     "date": "2026-11-26",
+     "type": "explain",
+     "confidence": "mid",
+     "result": "ok"
+    }
+   ]
+  },
+  {
+   "id": "perfect-tense",
+   "name": "現在完成式",
+   "layer": 3,
+   "prereqs": [
+    "simple-tenses"
+   ],
+   "summary": "看到 since、for、so far、recently 用 have + p.p.",
+   "pitfalls": [
+    "since 後面接一段期間（since three years）",
+    "現在完成式和過去式混用"
+   ],
+   "status": "weak",
+   "score": 1,
+   "lastSeen": "2026-11-26",
+   "history": [
+    {
+     "date": "2026-11-26",
+     "type": "debug",
+     "confidence": "high",
+     "result": "wrong"
+    }
+   ]
+  },
+  {
+   "id": "passive-voice",
+   "name": "主動與被動",
+   "layer": 3,
+   "prereqs": [
+    "simple-tenses",
+    "subject-verb"
+   ],
+   "summary": "主詞是「被做」的東西時，用 be + 過去分詞",
+   "pitfalls": [
+    "主詞是物卻用主動（The report submitted）",
+    "be 動詞後面接原形動詞"
+   ],
+   "status": "weak",
+   "score": 1,
+   "lastSeen": "2026-11-26",
+   "history": [
+    {
+     "date": "2026-11-26",
+     "type": "predict",
+     "confidence": "mid",
+     "result": "wrong"
+    }
+   ]
+  },
+  {
+   "id": "prep-conj",
+   "name": "介系詞 vs 連接詞",
+   "layer": 3,
+   "prereqs": [
+    "word-position"
+   ],
+   "summary": "because / although 接句子；because of / despite 接名詞",
+   "pitfalls": [
+    "despite 後面接完整句子",
+    "due to 和 because 混用"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "gerund-infinitive",
+   "name": "動名詞與不定詞",
+   "layer": 3,
+   "prereqs": [
+    "word-position"
+   ],
+   "summary": "enjoy / avoid 接 V-ing；plan / decide 接 to V",
+   "pitfalls": [
+    "look forward to 後面接原形",
+    "suggest 人 to V"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "pronoun-case",
+   "name": "代名詞格位",
+   "layer": 3,
+   "prereqs": [
+    "subject-verb"
+   ],
+   "summary": "主格、受格、所有格、反身代名詞放對位置",
+   "pitfalls": [
+    "介系詞後面用主格（between you and I）",
+    "所有格 its 和 it's 搞混"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "articles",
+   "name": "冠詞 a / an / the",
+   "layer": 2,
+   "prereqs": [
+    "parts-of-speech"
+   ],
+   "summary": "a / an 看發音，第一次提到用 a，特定的用 the",
+   "pitfalls": [
+    "a/an 看字母不看發音（a hour）",
+    "不可數名詞前面加 a"
+   ],
+   "status": "shaky",
+   "score": 3,
+   "lastSeen": "2026-11-26",
+   "history": [
+    {
+     "date": "2026-11-26",
+     "type": "predict",
+     "confidence": "mid",
+     "result": "ok"
+    },
+    {
+     "date": "2026-11-26",
+     "type": "explain",
+     "confidence": "low",
+     "result": "partial"
+    }
+   ]
+  },
+  {
+   "id": "participles",
+   "name": "分詞當形容詞",
+   "layer": 4,
+   "prereqs": [
+    "passive-voice"
+   ],
+   "summary": "修飾人用 -ed（interested），修飾事物用 -ing（interesting）",
+   "pitfalls": [
+    "the attached file 寫成 the attaching file",
+    "I am boring 意思變成「我很無聊（讓人覺得煩）」"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "relative-clause",
+   "name": "關係代名詞",
+   "layer": 4,
+   "prereqs": [
+    "pronoun-case",
+    "prep-conj"
+   ],
+   "summary": "who 指人、which 指物、whose 表所有，逗號後不用 that",
+   "pitfalls": [
+    "逗號後面用 that",
+    "whose 和 who's 搞混"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "comparison",
+   "name": "比較級與最高級",
+   "layer": 3,
+   "prereqs": [
+    "word-position"
+   ],
+   "summary": "兩者比用 -er / more + than，三者以上用 the -est",
+   "pitfalls": [
+    "more 和 -er 一起用（more faster）",
+    "than 和 then 搞混"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "conjunctive-adverb",
+   "name": "連接副詞 However / Therefore",
+   "layer": 4,
+   "prereqs": [
+    "prep-conj"
+   ],
+   "summary": "However 後面加逗號，連接兩個完整句子",
+   "pitfalls": [
+    "用逗號直接接兩個句子",
+    "however 當成 although 用"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "conditionals",
+   "name": "假設語氣",
+   "layer": 5,
+   "prereqs": [
+    "perfect-tense",
+    "relative-clause"
+   ],
+   "summary": "與現在相反 If + 過去式，與過去相反 If + had p.p.",
+   "pitfalls": [
+    "If I was you（要用 were）",
+    "與過去相反卻用 would + 原形"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "word-choice",
+   "name": "易混淆單字",
+   "layer": 4,
+   "prereqs": [
+    "word-position"
+   ],
+   "summary": "affect / effect、ensure / insure 依詞性和語意選對",
+   "pitfalls": [
+    "affect 當名詞用",
+    "complement / compliment 拼錯"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  },
+  {
+   "id": "business-phrases",
+   "name": "商業書信常用句",
+   "layer": 5,
+   "prereqs": [
+    "participles",
+    "conjunctive-adverb"
+   ],
+   "summary": "看懂並寫出 Please find attached…、at your earliest convenience",
+   "pitfalls": [
+    "Please find attach the file",
+    "逐字翻中文造成語氣太硬"
+   ],
+   "status": "unseen",
+   "score": 0,
+   "lastSeen": null,
+   "history": []
+  }
+ ],
+ "misconceptions": [
+  {
+   "id": "m1",
+   "node": "passive-voice",
+   "label": "主詞是物卻用主動",
+   "wrong": "The report submitted yesterday. 我以為這樣就是過去式",
+   "right": "報告是被交出去的，要用 be + p.p.：was submitted",
+   "scenarios": [
+    "報告昨天被交出"
+   ],
+   "created": "2026-11-25",
+   "interval": 1,
+   "nextReview": "2026-11-26",
+   "hits": 1,
+   "retired": false
+  },
+  {
+   "id": "m2",
+   "node": "perfect-tense",
+   "label": "since 後面接一段期間",
+   "wrong": "since three years",
+   "right": "since 接時間點（since 2023）；一段期間用 for（for three years）",
+   "scenarios": [
+    "在公司工作幾年"
+   ],
+   "created": "2026-11-25",
+   "interval": 1,
+   "nextReview": "2026-11-26",
+   "hits": 1,
+   "retired": false
+  }
+ ],
+ "lastQuestion": null,
+ "stats": {
+  "answered": 14,
+  "correct": 9,
+  "streak": 1
+ }
+}

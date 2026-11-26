@@ -1,0 +1,48 @@
+{
+ "question_id": "demo-en-1",
+ "node": "passive-voice",
+ "node_name": "主動與被動",
+ "kind": "new",
+ "type": "debug",
+ "lecture": "判斷主動或被動，只要問一句：主詞是「自己做」還是「被做」？人寫報告是主動（Tom wrote the report）；報告不會自己寫，是被寫的，所以主詞是報告時要用被動：be 動詞 + 過去分詞（p.p.）。be 動詞的時態跟著句子走：昨天就用 was / were。",
+ "example": "The meeting was postponed until Friday.",
+ "example_explain": [
+  "The meeting：主詞是「會議」，會議不會自己延期",
+  "was postponed：被延期了（was＋過去分詞 postponed）",
+  "until Friday：延到星期五。整句：會議被延到星期五。"
+ ],
+ "question": "下面這句有一個文法錯誤，請找出來並寫出正確的句子：\nThe sales report submitted to the manager yesterday.\n（中文：業績報告昨天被交給經理了。）",
+ "hint": "報告會自己「交出去」嗎？主詞是物、而且是被做的動作時，要用哪個結構？",
+ "show_tables": [],
+ "visuals": [
+  {
+   "kind": "table",
+   "title": "被動語態怎麼組",
+   "columns": [
+    "時態",
+    "被動的樣子",
+    "例句"
+   ],
+   "rows": [
+    [
+     "現在",
+     "is / are + p.p.",
+     "The room is cleaned every day."
+    ],
+    [
+     "過去",
+     "was / were + p.p.",
+     "The email was sent yesterday."
+    ],
+    [
+     "現在完成",
+     "has / have been + p.p.",
+     "The order has been shipped."
+    ]
+   ]
+  }
+ ],
+ "ref_code": null,
+ "runner": null,
+ "cached_lecture": false
+}

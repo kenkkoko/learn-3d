@@ -1,0 +1,33 @@
+{
+ "ok_pattern": "was\\s+submitted",
+ "ok": {
+  "result": "ok",
+  "feedback": "對！報告是「被交出去」的，所以要用被動 was submitted；時間是 yesterday，be 動詞用過去式 was。你抓到「主詞是物」這個線索了。",
+  "danger": false,
+  "delta": 1,
+  "node": {
+   "id": "passive-voice",
+   "status": "shaky",
+   "score": 2
+  },
+  "misconception_label": null,
+  "reference_answer": "The sales report was submitted to the manager yesterday.",
+  "offtopic": false,
+  "fallback": false
+ },
+ "wrong": {
+  "result": "wrong",
+  "feedback": "這句的主詞是 the sales report，報告不會自己交出去，是被交的，要用被動：was + submitted。只寫 submitted 會讓句子變成「報告自己交了」。",
+  "danger": false,
+  "delta": -1,
+  "node": {
+   "id": "passive-voice",
+   "status": "weak",
+   "score": 0
+  },
+  "misconception_label": "主詞是物卻用主動",
+  "reference_answer": "The sales report was submitted to the manager yesterday.",
+  "offtopic": false,
+  "fallback": false
+ }
+}
