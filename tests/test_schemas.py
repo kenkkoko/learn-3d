@@ -265,3 +265,15 @@ def test_intake_slightly_too_long_is_trimmed_not_failed():
     assert it is not None and len(llm.calls) == 1
     assert it.topic_slug == "english-grammar-speaking"
     assert len(it.questions) == 4 and all(len(q.options) == 4 for q in it.questions)
+
+
+def test_failure_reason_is_recorded():
+    """全部重試都失敗時記下原因，API 會附在「暫時無法產生」後面。"""
+    from learn3d.providers.fake import FakeLLM
+    from learn3d.schemas import AiChoice
+    from learn3d.structured import last_failure
+    from learn3d.tasks import run_intake
+
+    llm = FakeLLM(scripted=["不是 JSON"] * 3)
+    assert run_intake(llm, AiChoice(provider="fake", model="m1"), "英文") is None
+    assert "m1" in last_failure() and last_failure()

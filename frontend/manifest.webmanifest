@@ -1,0 +1,16 @@
+{
+  "name": "Learn 3D · 知識星雲",
+  "short_name": "Learn 3D",
+  "description": "任何主題都能生成學習路徑，在 3D 知識星雲裡看見熟練度，一問一答練到真的會。",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#08080a",
+  "theme_color": "#08080a",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

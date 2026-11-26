@@ -44,6 +44,8 @@ def files() -> list[tuple[str, Path]]:
     return out
 
 
+BINARY = {".png", ".ico", ".jpg", ".jpeg", ".webp", ".gif", ".zip", ".woff", ".woff2"}
+
 VERSION_FILE = ROOT / "frontend" / "bridge-version.json"
 
 
@@ -64,7 +66,9 @@ def build(out: Path = OUT) -> Path:
     with zipfile.ZipFile(tmp, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for name, src in files():
             # 換行一律統一（git 在 Windows 取出時可能轉成 CRLF），打包結果才不因電腦而異
-            data = src.read_bytes().replace(b"\r\n", b"\n")
+            data = src.read_bytes()
+            if src.suffix.lower() not in BINARY:  # 圖片等二進位檔不能動（PNG 檔頭本身就含 \r\n）
+                data = data.replace(b"\r\n", b"\n")
             if name.endswith((".bat", "README.txt")):
                 data = data.replace(b"\n", b"\r\n")
             info = zipfile.ZipInfo(FOLDER + name, date_time=FIXED_TIME)

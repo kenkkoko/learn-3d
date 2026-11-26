@@ -131,6 +131,13 @@ def _find_node(progress: dict, node_id: str) -> dict:
     raise ApiError(404, f"找不到節點「{node_id}」")
 
 
+def _fail(msg: str) -> str:
+    """「暫時無法產生」加上 AI 最後一次的失敗原因：同一段話在別人電腦上失敗時，才看得出是哪個 AI、哪裡不合格。"""
+    from .structured import last_failure
+    why = last_failure()
+    return f"{msg}（原因：{why}）" if why else msg
+
+
 def _call_ai(fn: Callable[[], Any]) -> Any:
     """包住 provider / task 呼叫：ProviderError → 503（訊息直接給使用者看）。"""
     try:
@@ -297,7 +304,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         _limit(request, req.ai)
         result = _call_ai(lambda: tasks.run_intake(providers.get_provider(req.ai.provider), req.ai, req.topic))
         if result is None:
-            raise ApiError(503, INTAKE_FAIL)
+            raise ApiError(503, _fail(INTAKE_FAIL))
         return result
 
     @app.post("/plan")
@@ -312,7 +319,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         _limit(request, req.ai)
         m = _call_ai(lambda: tasks.run_plan(providers.get_provider(req.ai.provider), req.ai, req))
         if m is None:
-            raise ApiError(503, PLAN_FAIL)
+            raise ApiError(503, _fail(PLAN_FAIL))
         with topic_lock(t):
             keep_from = None
             if store.exists(t):
@@ -366,7 +373,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             _limit(request, req.ai)
             lesson = _call_ai(lambda: tasks.run_lesson(providers.get_provider(req.ai.provider), req.ai, ctx))
             if lesson is None:
-                raise ApiError(503, LESSON_FAIL)
+                raise ApiError(503, _fail(LESSON_FAIL))
 
             lecture, example, example_explain = lesson.lecture, lesson.example, list(lesson.example_explain)
             cached = False

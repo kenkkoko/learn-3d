@@ -26,6 +26,12 @@ from .schemas import AiChoice
 T = TypeVar("T", bound=BaseModel)
 
 _log_lock = threading.Lock()
+_last_failure = threading.local()
+
+
+def last_failure() -> str:
+    """這個執行緒上一次 call_structured 全部失敗時的原因摘要（給使用者看的錯誤訊息用）。"""
+    return getattr(_last_failure, "text", "") or ""
 _MAX_ERR = 300
 
 
@@ -149,6 +155,7 @@ def call_structured(
     """呼叫 LLM 並回傳通過驗證（含 extra_check）的 model；全部失敗回傳 None。"""
     schema = model_cls.model_json_schema()
     feedback = ""
+    _last_failure.text = ""
     provider_error: ProviderError | None = None  # 最後一次失敗若是 AI 工具本身的問題（沒登入、額度用完…）
     for attempt in range(1, max_retries + 1):
         provider_error = None
@@ -193,6 +200,7 @@ def call_structured(
         if give_up:
             break
         feedback = (error or "未知錯誤")[:_MAX_ERR * 2]
+    _last_failure.text = f"{getattr(llm, 'name', ai.provider)}{f' / {ai.model}' if ai.model else ''}：{(feedback or '')[:200]}"
     if provider_error is not None:
         # 不是 AI 輸出格式的問題，而是 AI 工具用不了：把原因（例如「請執行 claude 登入」）交給 API 層顯示，
         # 不要變成看不出原因的「暫時無法產生」。
