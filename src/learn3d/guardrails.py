@@ -37,7 +37,7 @@ __all__ = [
 ]
 
 PII_MASK = "[已遮蔽]"
-MAX_TOPIC_LEN = 60
+MAX_TOPIC_LEN = 2000  # 使用者常會寫一段話描述想學什麼
 MAX_ANSWER_LEN = 2000
 MAX_CODE_LEN = 5000
 
@@ -311,7 +311,7 @@ def is_offtopic(answer: str, question: str) -> bool:
 
 
 def check_topic(topic: str) -> str | None:
-    """主題名稱檢查：空白、超過 60 字、注入、明顯不是學習主題 → 回中文錯誤訊息；通過回 None。"""
+    """主題名稱檢查：空白、超過 2000 字、注入、明顯不是學習主題 → 回中文錯誤訊息；通過回 None。"""
     t = (topic or "").strip()
     if not t or not any(ch.isalnum() for ch in t):
         return "請輸入想學的主題，例如「SQL」「日文 N4」「樂理」。"

@@ -165,7 +165,7 @@ class TopicsResponse(_Strict):
 
 
 class IntakeRequest(_Strict):
-    topic: str = Field(min_length=1, max_length=60)
+    topic: str = Field(min_length=1, max_length=2000)  # 可以是一段描述（想學什麼、為什麼）
     ai: AiChoice
 
 
@@ -177,7 +177,7 @@ class IntakeAnswers(_Strict):
 
 
 class PlanRequest(_Strict):
-    topic: str = Field(min_length=1, max_length=60)
+    topic: str = Field(min_length=1, max_length=2000)  # 可以是一段描述（想學什麼、為什麼）
     slug: str = Field(pattern=r"^[a-z0-9-]{2,30}$")
     domain: Domain
     answers: IntakeAnswers

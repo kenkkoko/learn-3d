@@ -216,7 +216,7 @@ def test_plan_request_slug_and_mode():
     with pytest.raises(ValidationError):
         PlanRequest.model_validate({**base, "slug": "../etc"})
     with pytest.raises(ValidationError):
-        PlanRequest.model_validate({**base, "topic": "x" * 61})
+        PlanRequest.model_validate({**base, "topic": "x" * 2001})
     with pytest.raises(ValidationError):
         PlanRequest.model_validate({**base, "mode": "overwrite"})
 

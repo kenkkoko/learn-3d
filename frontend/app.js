@@ -1409,6 +1409,10 @@ ntDialog.addEventListener("cancel", (ev) => {
 });
 ntDialog.addEventListener("close", () => { ntDialog.returnValue = ""; });
 
+// 多行輸入：Enter 換行，Ctrl / ⌘ + Enter 送出
+$("#ntTopic").addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); $("#ntTopicForm").requestSubmit(); }
+});
 $("#ntTopicForm").addEventListener("submit", async (ev) => {
   ev.preventDefault();
   const topic = $("#ntTopic").value.trim();
