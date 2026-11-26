@@ -320,3 +320,15 @@ def test_usage_records_claude_and_reads_codex(tmp_path, monkeypatch):
     assert labels == ["5 小時", "每週"] and snap["codex"]["windows"][0]["used_percent"] == 41.0
     monkeypatch.setattr(usage, "_state", None)
     assert "claude" in usage.snapshot()["providers"]  # 存在檔案裡，重開也讀得到
+
+
+def test_usage_today_counts(tmp_path, monkeypatch):
+    """沒有額度事件時也記下今天的呼叫次數與 token。"""
+    from learn3d import usage
+    monkeypatch.setenv("LEARN3D_DATA", str(tmp_path))
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path / "nocodex"))
+    monkeypatch.setattr(usage, "_state", None)
+    usage.note_claude_call({"input_tokens": 1000, "output_tokens": 200}, 0.01)
+    usage.note_claude_call({"input_tokens": 500, "output_tokens": 100, "cache_read_input_tokens": 50}, 0.005)
+    t = usage.snapshot()["providers"]["claude"]["today"]
+    assert t["calls"] == 2 and t["tokens"] == 1850 and abs(t["cost_usd"] - 0.015) < 1e-9

@@ -80,12 +80,30 @@ def record_claude(info: Any) -> None:
         _save()
 
 
-def note_claude_call() -> None:
-    """有成功呼叫但這次沒有 RateLimitEvent：至少更新「最後使用時間」。"""
+def _today() -> str:
+    return time.strftime("%Y-%m-%d", time.gmtime(time.time() + 8 * 3600))  # 台灣時間的日期
+
+
+def note_claude_call(tokens: dict | None = None, cost_usd: float | None = None) -> None:
+    """每次成功呼叫都記：今天呼叫幾次、用了多少 token。
+
+    Claude 不一定每次都送額度事件（通常只在狀態改變時送），所以另外記「今天的用量」，
+    左下角至少看得到這個；有額度事件時再顯示 5 小時／每週的比例。
+    """
+    t = tokens or {}
+    n = sum(int(t.get(k) or 0) for k in ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"))
     with _lock:
         st = _load()
         c = st.setdefault("claude", {"windows": {}})
         c["updated"] = int(time.time())
+        day = c.get("today") if isinstance(c.get("today"), dict) else {}
+        if day.get("date") != _today():
+            day = {"date": _today(), "calls": 0, "tokens": 0, "cost_usd": 0.0}
+        day["calls"] += 1
+        day["tokens"] += n
+        if isinstance(cost_usd, (int, float)):
+            day["cost_usd"] = round(day["cost_usd"] + float(cost_usd), 4)
+        c["today"] = day
         _save()
 
 
@@ -194,5 +212,6 @@ def snapshot() -> dict[str, Any]:
             wins.append(w)
         order = {"five_hour": 0, "window_300": 0, "seven_day": 1, "window_10080": 1}
         wins.sort(key=lambda w: order.get(w["type"], 2))
-        out[pid] = {"windows": wins, "updated": data.get("updated")}
+        today = data.get("today") if isinstance(data.get("today"), dict) and data["today"].get("date") == _today() else None
+        out[pid] = {"windows": wins, "updated": data.get("updated"), "today": today}
     return {"providers": out, "now": int(now)}

@@ -93,10 +93,10 @@ def _record_usage(info) -> None:
         pass
 
 
-def _note_call() -> None:
+def _note_call(result=None) -> None:
     try:
         from .. import usage
-        usage.note_claude_call()
+        usage.note_claude_call(getattr(result, "usage", None), getattr(result, "total_cost_usd", None))
     except Exception:  # noqa: BLE001
         pass
 
@@ -208,6 +208,7 @@ class ClaudeProvider(LLMProvider):
             texts: list[str] = []
             final: str | None = None
             failure: str | None = None
+            result_msg = None
             # 不能在 async for 裡直接 raise：SDK 的產生器還在執行，會變成
             # 「aclose(): asynchronous generator is already running」，真正的原因（例如沒登入）就被蓋掉了。
             # 先記下來，讓產生器正常結束後再丟出。
@@ -225,9 +226,10 @@ class ClaudeProvider(LLMProvider):
                         failure = str("; ".join(getattr(msg, "errors", None) or []) or msg.result or msg.subtype)
                     else:
                         final = msg.result
+                        result_msg = msg
             if failure is not None:
                 raise ProviderError(friendly_error(failure), retryable=not _LOGIN_RE.search(failure))
-            _note_call()
+            _note_call(result_msg)
             return final if final else "".join(texts)
 
         try:

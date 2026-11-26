@@ -197,15 +197,24 @@ function renderUsage() {
   const now = usageUi.data?.now || Math.floor(Date.now() / 1000);
   const name = (id) => state.providers.find((p) => p.id === id)?.name || ({ claude: "Claude Code", codex: "Codex CLI" }[id] || id);
   // 左下角：顯示「日常用 AI」那一家的額度
-  const mine = all[aiChoice("daily").provider];
+  const daily = aiChoice("daily").provider;
+  const mine = all[daily];
   const mini = $("#bridgeUsage");
   const wins = (mine?.windows || []).slice(0, 2);
-  mini.hidden = state.bridge !== "ok" && getMode() !== "mock" || !wins.length;
-  mini.replaceChildren(...wins.map((w) => h("span", { class: "bu-item", title: `${w.label}額度：${usageText(w)}${w.resets_at ? `，${fmtLeft(w.resets_at - now)}` : ""}` },
-    `${w.label} `, usageBar(w), ` ${usageText(w)}`)));
+  const fmtTok = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1000 ? `${Math.round(n / 1000)}k` : String(n));
+  mini.hidden = state.bridge !== "ok" && getMode() !== "mock";
+  if (wins.length) {
+    mini.replaceChildren(...wins.map((w) => h("span", { class: "bu-item", title: `${w.label}額度：${usageText(w)}${w.resets_at ? `，${fmtLeft(w.resets_at - now)}` : ""}` },
+      `${w.label} `, usageBar(w), ` ${usageText(w)}`)));
+  } else if (mine?.today) {
+    mini.replaceChildren(h("span", { class: "bu-item", title: "今天透過這個網站呼叫 AI 的次數與 token；額度百分比要等 AI 回報才會出現" },
+      `今天 ${mine.today.calls} 次 · ${fmtTok(mine.today.tokens)} tokens`));
+  } else {
+    mini.replaceChildren(h("span", { class: "bu-item" }, daily === "ollama" ? "本機模型 · 沒有額度限制" : "用量：出一題後顯示"));
+  }
   // 面板：每一家的明細
   const box = $("#bdUsage");
-  const ids = Object.keys(all).filter((id) => (all[id].windows || []).length);
+  const ids = Object.keys(all).filter((id) => (all[id].windows || []).length || all[id].today);
   box.hidden = !ids.length;
   if (!ids.length) { box.replaceChildren(); return; }
   box.replaceChildren(
@@ -216,7 +225,11 @@ function renderUsage() {
       ...(all[id].windows || []).map((w) => h("div", { class: "bu-row" },
         h("span", { class: "bu-label" }, w.label), usageBar(w),
         h("span", { class: "bu-val", dataset: { lv: usageLevel(w) } }, usageText(w)),
-        h("span", { class: "bu-reset" }, w.reset ? "已重置" : w.resets_at ? fmtLeft(w.resets_at - now) : ""))))),
+        h("span", { class: "bu-reset" }, w.reset ? "已重置" : w.resets_at ? fmtLeft(w.resets_at - now) : ""))),
+      all[id].today ? h("div", { class: "bu-today" },
+        `今天：${all[id].today.calls} 次呼叫 · ${fmtTok(all[id].today.tokens)} tokens`,
+        all[id].today.cost_usd ? h("small", null, `（換算 API 價約 US$${all[id].today.cost_usd.toFixed(2)}，訂閱不另外收費）`) : null) : null,
+      (all[id].windows || []).length ? null : h("div", { class: "bu-today muted" }, "5 小時／每週額度：Claude 還沒回報，回報後會顯示在這裡"))),
     h("p", { class: "fineprint" }, "數字來自 AI 工具本身，在每次出題、判定後更新（不會額外花用量）。AI 沒回報百分比時顯示狀態（正常／接近上限／已達上限）。"));
 }
 

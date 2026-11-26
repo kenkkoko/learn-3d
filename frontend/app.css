@@ -614,3 +614,6 @@ select option { background: #141418; }
 .bu-val[data-lv="warn"] { color: var(--warn); } .bu-val[data-lv="full"] { color: var(--danger); }
 .bu-reset { color: var(--faint); font-size: 12px; white-space: nowrap; }
 .bd-usage .fineprint { margin-top: 8px; }
+.bu-today { font-size: 12.5px; color: var(--text); margin-top: 4px; }
+.bu-today small { color: var(--faint); margin-left: 4px; }
+.bu-today.muted { color: var(--faint); }
