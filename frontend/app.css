@@ -88,16 +88,22 @@ select option { background: #141418; }
 
 /* ---- 版面 ---- */
 .app {
+  --side-col: var(--side-w); --panel-col: 0px;
   height: 100dvh; display: grid;
-  grid-template-columns: var(--side-w) minmax(0, 1fr) 0;
+  grid-template-columns: var(--side-col) minmax(0, 1fr) var(--panel-col);
   transition: grid-template-columns .45s var(--ease);
 }
-.app.panel-open { grid-template-columns: var(--side-w) minmax(0, 1fr) var(--panel-w); }
+.app.panel-open { --panel-col: var(--panel-w); }
+.app.side-collapsed { --side-col: 0px; }
+.app.side-collapsed .sidebar { visibility: hidden; overflow: hidden; padding: 0; border: 0; }
+/* 拖曳中不要動畫，跟手 */
+.app.resizing { transition: none; user-select: none; cursor: col-resize; }
+.app.resizing * { cursor: col-resize !important; }
 .mobilebar { display: none; }
 
 /* ---- 左欄 ---- */
 .sidebar {
-  display: flex; flex-direction: column; min-height: 0; padding: 18px 14px 12px;
+  position: relative; display: flex; flex-direction: column; min-height: 0; padding: 18px 14px 12px;
   border-right: 1px solid var(--line-soft); background: rgba(10,10,13,.75);
 }
 .sidebar-head { display: flex; align-items: center; gap: 10px; padding: 2px 6px 14px; }
@@ -265,7 +271,7 @@ select option { background: #141418; }
 
 /* ---- 右側問答面板 ---- */
 .panel {
-  min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+  position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
   border-left: 1px solid var(--line-soft); background: rgba(11,11,14,.92);
 }
 .app:not(.panel-open) .panel { visibility: hidden; }
@@ -428,7 +434,8 @@ select option { background: #141418; }
   @media (prefers-reduced-motion: reduce) { .sidebar, .panel { transition: none; } }
   .panel-head, .panel-body { min-width: 0; padding-left: 16px; padding-right: 16px; }
   .drawer-close { display: inline-grid; }
-  .panel-tab { display: none; }
+  .panel-tab, .side-tab, .resizer, .desk-only { display: none !important; }
+  .app.side-collapsed .sidebar { padding: 18px 14px 12px; overflow: auto; border: 0; }
   .scrim { position: fixed; inset: 0; z-index: 35; background: rgba(0,0,0,.55); }
   .topic-head { padding: 14px 16px 6px; gap: 10px; }
   .topic-title { font-size: 19px; }
@@ -456,3 +463,25 @@ select option { background: #141418; }
 .mic-lang { min-height: 36px; border-radius: 10px; background: transparent; color: var(--text); border: 1px solid var(--line); padding: 0 8px; font: inherit; font-size: 13px; }
 .mic-status { font-size: 12px; color: var(--accent); }
 .mic-note { flex-basis: 100%; font-size: 11.5px; color: var(--faint); }
+
+/* 橋接提示卡：可複製的安裝指令、下載按鈕 */
+.bridge-card .copy-line { display: block; margin-top: 6px; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.06);
+  font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; user-select: all; }
+.bridge-card a.btn { text-decoration: none; }
+.bridge-card .row { flex-wrap: wrap; }
+
+/* ---- 面板拖曳把手、收合 ---- */
+.resizer { position: absolute; top: 0; bottom: 0; width: 12px; z-index: 6; cursor: col-resize; touch-action: none; }
+.resizer-side { right: -6px; }
+.resizer-panel { left: 0; }
+.resizer::after { content: ""; position: absolute; top: 0; bottom: 0; left: 5px; width: 2px; background: transparent; transition: background .2s; }
+.resizer:hover::after, .resizer:focus-visible::after, .resizer.active::after { background: var(--accent); }
+.resizer:focus-visible { outline: none; }
+.app.side-collapsed .resizer-side { display: none; }
+.panel-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.side-tab {
+  position: fixed; left: 0; top: 50%; translate: 0 -50%; z-index: 9; writing-mode: vertical-rl;
+  padding: 16px 8px; border-radius: 0 12px 12px 0; border: 1px solid var(--line); border-left: 0;
+  background: rgba(20,20,24,.9); color: var(--ink); cursor: pointer; font-size: 13px; letter-spacing: .2em;
+}
+.side-tab:hover { background: #1c1c22; }

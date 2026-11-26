@@ -547,6 +547,115 @@ document.addEventListener("keydown", (ev) => {
 });
 
 // ======================================================================
+// 桌機版面：左右欄可收合、可拖曳調整寬度（寬度記在 localStorage）
+// ======================================================================
+const LAYOUT_KEY = "learn3d.layout";
+const MIN_CENTER = 280;              // 中間星雲至少保留的寬度
+const SIDE = { min: 200, max: 480, def: 288 };
+const panelDefault = () => Math.round(Math.min(460, innerWidth * 0.38));
+const panelMax = () => Math.max(360, Math.min(innerWidth * 0.75, innerWidth - curSide() - MIN_CENTER));
+const PANEL_MIN = 320;
+
+const layout = (() => {
+  try { return { side: null, panel: null, collapsed: false, ...JSON.parse(localStorage.getItem(LAYOUT_KEY) || "{}") }; }
+  catch { return { side: null, panel: null, collapsed: false }; }
+})();
+const saveLayout = () => { try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)); } catch { /* 無痕模式等：只是不記住 */ } };
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+function curSide() { return app.classList.contains("side-collapsed") ? 0 : (layout.side ?? SIDE.def); }
+function curPanel() { return layout.panel ?? panelDefault(); }
+
+function applyLayout() {
+  // 一律寫成純 px：Chrome 無法在 0px 與 min(…vw) 之間做動畫，面板會卡在 0 寬
+  app.style.setProperty("--side-w", `${clamp(layout.side ?? SIDE.def, SIDE.min, SIDE.max)}px`);
+  app.style.setProperty("--panel-w", `${Math.round(clamp(curPanel(), PANEL_MIN, panelMax()))}px`);
+  const sideH = $("#resizeSide"), panelH = $("#resizePanel");
+  sideH.setAttribute("aria-valuemin", SIDE.min); sideH.setAttribute("aria-valuemax", SIDE.max);
+  sideH.setAttribute("aria-valuenow", Math.round(layout.side ?? SIDE.def));
+  panelH.setAttribute("aria-valuemin", PANEL_MIN); panelH.setAttribute("aria-valuemax", Math.round(panelMax()));
+  panelH.setAttribute("aria-valuenow", Math.round(clamp(curPanel(), PANEL_MIN, panelMax())));
+  const wide = curPanel() >= innerWidth * 0.55;
+  const w = $("#widenPanel");
+  w.setAttribute("aria-pressed", String(wide));
+  w.setAttribute("aria-label", wide ? "恢復問答面板寬度" : "加寬問答面板");
+}
+
+function setSideCollapsed(collapsed, { focus = true } = {}) {
+  app.classList.toggle("side-collapsed", collapsed);
+  $("#sideTab").hidden = !collapsed;
+  $("#collapseSidebar").setAttribute("aria-expanded", String(!collapsed));
+  $("#sideTab").setAttribute("aria-expanded", String(!collapsed));
+  layout.collapsed = collapsed;
+  saveLayout();
+  applyLayout();
+  if (focus) (collapsed ? $("#sideTab") : $("#collapseSidebar")).focus({ preventScroll: true });
+}
+
+/**
+ * 拖曳把手：滑鼠、觸控、觸控筆都用 Pointer Events；鍵盤方向鍵每次 16px（Shift 64px）；
+ * Home / End 到最小 / 最大；雙擊恢復預設。
+ */
+function makeResizer(handle, { get, set, min, max, reset, dir }) {
+  let startX = 0, startW = 0;
+  const onMove = (ev) => { set(clamp(startW + dir * (ev.clientX - startX), min(), max())); applyLayout(); };
+  const onUp = (ev) => {
+    handle.releasePointerCapture?.(ev.pointerId);
+    handle.removeEventListener("pointermove", onMove);
+    handle.removeEventListener("pointerup", onUp);
+    handle.removeEventListener("pointercancel", onUp);
+    handle.classList.remove("active");
+    app.classList.remove("resizing");
+    saveLayout();
+  };
+  handle.addEventListener("pointerdown", (ev) => {
+    if (ev.button !== 0) return;
+    ev.preventDefault();
+    startX = ev.clientX; startW = get();
+    handle.setPointerCapture?.(ev.pointerId);
+    handle.classList.add("active");
+    app.classList.add("resizing");
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
+  });
+  handle.addEventListener("keydown", (ev) => {
+    const step = ev.shiftKey ? 64 : 16;
+    let w = null;
+    if (ev.key === "ArrowLeft") w = get() - dir * step;
+    else if (ev.key === "ArrowRight") w = get() + dir * step;
+    else if (ev.key === "Home") w = min();
+    else if (ev.key === "End") w = max();
+    if (w == null) return;
+    ev.preventDefault();
+    set(clamp(w, min(), max())); applyLayout(); saveLayout();
+  });
+  handle.addEventListener("dblclick", () => { reset(); applyLayout(); saveLayout(); });
+}
+
+makeResizer($("#resizeSide"), {
+  dir: 1, get: () => layout.side ?? SIDE.def, set: (w) => { layout.side = w; },
+  min: () => SIDE.min, max: () => Math.min(SIDE.max, innerWidth - curPanelOpen() - MIN_CENTER),
+  reset: () => { layout.side = null; },
+});
+makeResizer($("#resizePanel"), {
+  dir: -1, get: () => clamp(curPanel(), PANEL_MIN, panelMax()), set: (w) => { layout.panel = w; },
+  min: () => PANEL_MIN, max: panelMax,
+  reset: () => { layout.panel = null; },
+});
+function curPanelOpen() { return app.classList.contains("panel-open") ? clamp(curPanel(), PANEL_MIN, panelMax()) : 0; }
+
+$("#collapseSidebar").addEventListener("click", () => setSideCollapsed(true));
+$("#sideTab").addEventListener("click", () => setSideCollapsed(false));
+$("#widenPanel").addEventListener("click", () => {
+  const wide = curPanel() >= innerWidth * 0.55;
+  layout.panel = wide ? null : Math.round(Math.min(innerWidth * 0.62, panelMax()));
+  applyLayout(); saveLayout();
+});
+addEventListener("resize", () => applyLayout());
+if (layout.collapsed && !isMobile()) setSideCollapsed(true, { focus: false });
+applyLayout();
+
+// ======================================================================
 // 問答
 // ======================================================================
 const qa = $("#qa");

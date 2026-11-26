@@ -40,6 +40,9 @@
     <div class="sidebar-head">
       <a class="brand" href="./"><span class="brand-dot" aria-hidden="true"></span>Learn 3D</a>
       <span class="mock-badge" id="mockBadge" hidden>示範資料</span>
+      <button type="button" class="icon-btn desk-only" id="collapseSidebar" aria-label="收合主題清單" aria-controls="sidebar" aria-expanded="true" title="收合主題清單">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+      </button>
       <button type="button" class="icon-btn drawer-close" id="closeSidebar" aria-label="關閉主題清單">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
       </button>
@@ -69,6 +72,7 @@
         <button type="button" class="text-btn" id="refreshProviders">重新偵測 AI 工具</button>
       </details>
     </div>
+    <div class="resizer resizer-side" id="resizeSide" role="separator" aria-orientation="vertical" aria-controls="sidebar" aria-label="調整主題清單寬度（方向鍵調整，雙擊恢復預設）" tabindex="0"></div>
   </aside>
 
   <!-- 中間：學習路徑 + 星雲 -->
@@ -76,14 +80,18 @@
     <section class="bridge-card" id="bridgeCard" hidden aria-labelledby="bridgeCardTitle">
       <div class="eyebrow">本機橋接</div>
       <h2 id="bridgeCardTitle">還沒偵測到本機橋接</h2>
-      <p>出題和判定要用你電腦上的 AI（Claude Code / Codex / Ollama），需要先啟動橋接服務：</p>
+      <p>出題和判定要用你電腦上的 AI（Claude Code / Codex / Ollama），需要在電腦上執行一個小程式「橋接」：</p>
       <ol>
-        <li>Windows：雙擊專案裡的 <code>windows/Start-Learn-Bridge.bat</code></li>
-        <li>或在專案資料夾執行 <code>uv run learn3d-bridge</code></li>
+        <li>安裝 uv（只要一次）：開啟 PowerShell 貼上
+          <code class="copy-line">powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"</code></li>
+        <li>下載橋接並解壓縮，雙擊裡面的 <code>Start-Learn-Bridge.bat</code>（第一次會下載約 400 MB，需要幾分鐘）</li>
+        <li>回到這裡按「重新偵測」；Chrome 若詢問「存取本機網路」請按允許</li>
       </ol>
+      <p class="fineprint">macOS / Linux：解壓縮後在資料夾執行 <code>uv run learn3d-bridge</code>。橋接只監聽你的電腦（127.0.0.1），AI 不能讀寫檔案或執行指令。</p>
       <p class="fineprint" id="bridgeCardNote">現在先用示範資料瀏覽；啟動後按「重新偵測」。</p>
       <div class="row">
-        <button type="button" class="btn btn-primary" id="retryBridge">重新偵測</button>
+        <a class="btn btn-primary" href="downloads/learn3d-bridge.zip" download>下載橋接（Windows / macOS / Linux）</a>
+        <button type="button" class="btn btn-ghost" id="retryBridge">重新偵測</button>
         <button type="button" class="btn btn-ghost" id="dismissBridgeCard">先看示範</button>
       </div>
     </section>
@@ -140,14 +148,20 @@
 
   <!-- 右側：問答面板 -->
   <aside class="panel" id="panel" aria-labelledby="panelTitle">
+    <div class="resizer resizer-panel" id="resizePanel" role="separator" aria-orientation="vertical" aria-controls="panel" aria-label="調整問答面板寬度（方向鍵調整，雙擊恢復預設）" tabindex="0"></div>
     <header class="panel-head">
       <div>
         <div class="eyebrow" id="panelEyebrow">一問一答</div>
         <h2 class="panel-title" id="panelTitle">問答</h2>
       </div>
+      <div class="panel-actions">
+      <button type="button" class="icon-btn desk-only" id="widenPanel" aria-label="加寬問答面板" aria-pressed="false" title="加寬 / 恢復">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M3 12h18" /></svg>
+      </button>
       <button type="button" class="icon-btn" id="closePanel" aria-label="收合問答面板">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
       </button>
+      </div>
     </header>
     <div class="panel-body" id="qa">
       <div class="qa-empty">
@@ -156,6 +170,7 @@
     </div>
   </aside>
   <button type="button" class="panel-tab" id="panelTab" aria-controls="panel" aria-expanded="false">問答</button>
+  <button type="button" class="side-tab" id="sideTab" aria-controls="sidebar" aria-expanded="false" hidden>主題</button>
   <div class="scrim" id="scrim" hidden></div>
 </div>
 

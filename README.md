@@ -9,6 +9,7 @@
 
 - **學習路徑**：問 3–4 題（目標、程度、生活情境、每次時間）後，強模型一次產出 15–25 個知識節點、4–7 層的先修關係圖，每個節點附常見迷思
 - **3D 知識星雲**：起點在中心、越外越進階；灰未學／紅不熟／黃半熟／綠熟練；每個節點顯示名稱；另有 2D 清單檢視
+- **可調整的版面**：左側主題清單可收合；左右兩欄都能拖曳調整寬度（方向鍵也可以，雙擊恢復預設），右側問答面板可拉到畫面 75% 或一鍵加寬，寬度會記住
 - **一問一答**：白話短講 → 範例逐段翻譯 → 題目用到的資料表 / 圖解 / 圖表 → 自評把握度 🟢🟡🔴 → 作答（可語音輸入）→ 判定與回饋
 - **題型輪替**：預測輸出、抓錯、解釋、實作（SQL / Python / JS 在瀏覽器裡實際執行驗證）
 - **迷思筆記與間隔複習**：1 → 3 → 7 → 14 天，每次換情境
@@ -18,13 +19,17 @@
 
 需要：[uv](https://docs.astral.sh/uv/)，以及下列任一個 AI 工具（已登入）：Claude Code、Codex CLI、Ollama。
 
+**一般使用者（不用 git）**：在 <https://learn.hellokai07.com> 按「下載橋接」，解壓縮後雙擊 `Start-Learn-Bridge.bat`。第一次會下載 Python 與 Claude Agent SDK（約 400 MB），之後橋接在背景執行並自動開啟網站。
+
+**開發者**：
+
 ```powershell
 git clone https://github.com/kenkkoko/learn-3d.git
 cd learn-3d
 uv run learn3d-bridge          # 啟動本機橋接：http://127.0.0.1:8766
 ```
 
-Windows 也可以雙擊 `windows\Start-Learn-Bridge.bat`。之後開 <https://learn.hellokai07.com>，或直接開 <http://127.0.0.1:8766/>。
+改了 `src/` 或 `windows/` 之後要重新打包下載檔（測試會檢查）：`uv run python scripts/build_bridge_zip.py`。
 
 環境變數：`LEARN3D_DATA`（資料目錄，預設 `~/.claude/learn-data`）、`LEARN3D_PORT`（預設 8766）、`LEARN3D_ORIGINS`（額外允許的網址，逗號分隔）、`OLLAMA_HOST`（只接受本機位址）。
 
