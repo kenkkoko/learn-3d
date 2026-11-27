@@ -19,12 +19,20 @@ function sameOriginIsBridge() {
 export const BRIDGE_BASE = sameOriginIsBridge() ? "" : DEFAULT_BRIDGE;
 const crossOrigin = BRIDGE_BASE !== "";
 
-/** mode：'bridge' 已連上橋接；'mock' 示範資料（?mock=1 或偵測不到橋接時瀏覽用） */
+/**
+ * mode：'bridge' 已連上橋接；'cloud' 沒有橋接時唯讀看雲端資料（手機複習）；
+ *       'mock' 示範資料（只在 ?mock=1）
+ */
 let mode = forcedMock ? "mock" : "bridge";
 export const isForcedMock = () => forcedMock;
 export const getMode = () => mode;
 export function useMock() { mode = "mock"; }
+export function useCloud() { if (!forcedMock) mode = "cloud"; }
 export function useBridge() { if (!forcedMock) mode = "bridge"; }
+
+/** 登入的使用者：每個橋接請求都帶 X-Learn3D-User，橋接把資料存到這個帳號自己的資料夾 */
+let userId = null;
+export function setUser(id) { userId = id || null; }
 
 export class ApiError extends Error {
   constructor(message, { status = 0, needsConfirm = false, body = null } = {}) {
@@ -62,7 +70,10 @@ async function bridgeFetch(path, { method = "GET", body, timeout = 30000, signal
     method,
     mode: "cors",
     signal: ctrl.signal,
-    headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+    headers: {
+      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(userId && path !== "/health" ? { "X-Learn3D-User": userId } : {}),
+    },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   };
   // Local Network Access：公開網站連到 127.0.0.1 時先宣告目標是 loopback（不支援的瀏覽器會忽略）
@@ -179,9 +190,62 @@ async function mockRoute(method, path, body) {
   throw new ApiError(`示範模式不支援 ${method} ${path}`, { status: 404 });
 }
 
+// ---------- 雲端唯讀（沒有橋接：手機或電腦沒開橋接時看紀錄） ----------
+export const NEEDS_BRIDGE = "這需要電腦開著本機橋接（AI 在你的電腦上）。手機上可以看主題和作答紀錄。";
+
+function summaryOf(topic, p, updatedAt) {
+  const nodes = p?.nodes || [];
+  const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+  return {
+    topic, title: p?.title || topic, domain: p?.domain || null, nodes: nodes.length,
+    mastered: nodes.filter((n) => n.status === "mastered").length,
+    due: (p?.misconceptions || []).filter((m) => !m.retired && String(m.nextReview || "") <= today).length,
+    updated: Date.parse(updatedAt || 0) / 1000 || 0,
+  };
+}
+
+async function cloudRoute(method, path) {
+  const cloud = await import("./cloud.js");
+  if (path === "/health") return { ok: true, name: "learn3d-cloud", version: "cloud" };
+  if (path.startsWith("/providers")) return { providers: [] };
+  if (path === "/usage") return { now: Math.floor(Date.now() / 1000), providers: {} };
+  if (path === "/topics" && method === "GET") {
+    const rows = await cloud.cloudTopics();
+    return { topics: rows.map((r) => summaryOf(r.topic, r.progress, r.updated_at)) };
+  }
+  const jm = path.match(/^\/topics\/([a-z0-9-]+)\/journal(?:\?(.*))?$/);
+  if (jm && method === "GET") {
+    const q = new URLSearchParams(jm[2] || "");
+    return cloud.cloudJournal(jm[1], { limit: Number(q.get("limit") || 30), before: q.get("before") || undefined,
+      node: q.get("node") || undefined, only: q.get("only") || undefined });
+  }
+  const m = path.match(/^\/topics\/([a-z0-9-]+)(\/env)?$/);
+  if (m && method === "GET") {
+    const r = await cloud.cloudTopic(m[1]);
+    if (!r?.data?.progress) throw new ApiError(`找不到主題「${m[1]}」`, { status: 404 });
+    const p = structuredClone(r.data.progress);
+    if (m[2]) return { runner: p.runner || null, sql: r.data.env_sql || null };
+    if (p.lastQuestion && typeof p.lastQuestion === "object") delete p.lastQuestion.rubric;
+    return p;
+  }
+  throw new ApiError(NEEDS_BRIDGE, { status: 0, body: { needs_bridge: true } });
+}
+
 async function call(method, path, body, opts = {}) {
   if (mode === "mock") return mockRoute(method, path, body);
-  return bridgeFetch(path, { method, body, ...opts });
+  if (mode === "cloud") return cloudRoute(method, path, body);
+  const res = await bridgeFetch(path, { method, body, ...opts });
+  if (method !== "GET") notifyChange(method, path, res);
+  return res;
+}
+
+/** 會改到本機主題檔案的請求成功後，發出 learn3d:changed（網站收到就排程同步到雲端） */
+function notifyChange(method, path, res) {
+  let topic = null;
+  const m = path.match(/^\/topics\/([a-z0-9-]+)(?:\/(lesson|grade|jump|reset))?$/);
+  if (m && (m[2] || method === "DELETE")) topic = m[1];
+  else if (path === "/plan") topic = res?.topic || null;
+  if (topic) dispatchEvent(new CustomEvent("learn3d:changed", { detail: { topic } }));
 }
 
 // ---------- 偵測 ----------
@@ -227,11 +291,20 @@ export const api = {
   followup: (t, req) => call("POST", `/topics/${encodeURIComponent(t)}/followup`, req, { timeout: 180000 }),
   jump: (t, node) => call("POST", `/topics/${encodeURIComponent(t)}/jump`, { node }),
   reset: (t) => call("POST", `/topics/${encodeURIComponent(t)}/reset`, { confirm: "reset" }),
-  journal: (t, { limit = 30, before, node } = {}) => {
+  journal: (t, { limit = 30, before, node, only } = {}) => {
     const q = new URLSearchParams({ limit: String(limit) });
     if (before) q.set("before", before);
     if (node) q.set("node", node);
+    if (only) q.set("only", only);
     return call("GET", `/topics/${encodeURIComponent(t)}/journal?${q}`);
   },
   remove: (t) => call("DELETE", `/topics/${encodeURIComponent(t)}`, { confirm: t }),
+  // 同步（一律直接找橋接，不走 mock / cloud）
+  syncManifest: () => bridgeFetch("/sync/manifest"),
+  syncExport: (t) => bridgeFetch(`/sync/topics/${encodeURIComponent(t)}`, { timeout: 60000 }),
+  syncImport: (t, body) => bridgeFetch(`/sync/topics/${encodeURIComponent(t)}/import`, { method: "POST", body, timeout: 60000 }),
+  syncMark: (t, body) => bridgeFetch(`/sync/topics/${encodeURIComponent(t)}/mark`, { method: "POST", body }),
+  syncForget: (t) => bridgeFetch(`/sync/topics/${encodeURIComponent(t)}/forget`, { method: "POST", body: {} }),
+  syncDrop: (t) => bridgeFetch(`/sync/topics/${encodeURIComponent(t)}/drop`, { method: "POST", body: {} }),
+  syncClaim: () => bridgeFetch("/sync/claim", { method: "POST", body: {} }),
 };

@@ -14,6 +14,7 @@ import re
 import shutil
 import sqlite3
 import tempfile
+from contextvars import ContextVar
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -41,8 +42,33 @@ class TopicNotFound(StoreError):
 
 
 # ---------- 路徑 ----------
-def data_root() -> Path:
+# 登入的使用者（網站在每個請求帶 X-Learn3D-User）各自一個資料夾：<learn-data>/users/<uid>/
+# 沒帶（舊網站、Claude Code skill）就用 <learn-data>/ 本身，跟以前一樣。
+USER_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+USERS = "users"
+_current_user: ContextVar[str | None] = ContextVar("learn3d_user", default=None)
+
+
+def set_user(uid: str | None):
+    """設定這個請求的使用者；回傳 token 給 reset_user。uid 格式不對就當作沒有。"""
+    return _current_user.set(uid if uid and USER_RE.fullmatch(uid) else None)
+
+
+def reset_user(token) -> None:
+    _current_user.reset(token)
+
+
+def current_user() -> str | None:
+    return _current_user.get()
+
+
+def base_root() -> Path:
     return get_settings().data_root
+
+
+def data_root() -> Path:
+    uid = _current_user.get()
+    return base_root() / USERS / uid if uid else base_root()
 
 
 def check_topic_name(topic: str) -> str:
@@ -364,8 +390,15 @@ def journal_append(topic: str, entry: dict) -> None:
         f.write(line)
 
 
+JOURNAL_FILTERS = {
+    "wrong": lambda r: r.get("result") in ("wrong", "partial"),
+    "unsure": lambda r: r.get("confidence") in ("low", "mid"),
+    "danger": lambda r: bool(r.get("danger")),
+}
+
+
 def journal_read(topic: str, limit: int = 30, before: str | None = None,
-                 node: str | None = None) -> tuple[list[dict], bool]:
+                 node: str | None = None, only: str | None = None) -> tuple[list[dict], bool]:
     """最新的在前。before＝上一頁最後一筆的 id（往更早翻）；node＝只看某節點。
 
     壞掉的行（例如被手動編輯）直接略過，不讓整個紀錄打不開。
@@ -387,6 +420,8 @@ def journal_read(topic: str, limit: int = 30, before: str | None = None,
     rows.reverse()
     if node:
         rows = [r for r in rows if r.get("node") == node]
+    if only in JOURNAL_FILTERS:
+        rows = [r for r in rows if JOURNAL_FILTERS[only](r)]
     if before:
         idx = next((i for i, r in enumerate(rows) if r.get("id") == before), None)
         rows = rows[idx + 1:] if idx is not None else []
