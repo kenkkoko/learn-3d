@@ -30,6 +30,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from . import __version__, guardrails, providers, scoring, store, tasks
 from .config import HOST, Settings, get_settings
 from .schemas import (
+    FollowupRequest,
+    FollowupResponse,
     AiChoice,
     ConfirmRequest,
     ErrorResponse,
@@ -52,6 +54,7 @@ log = logging.getLogger("learn3d.api")
 
 LESSON_FAIL = "這題暫時無法產生，請再試一次或換一個節點"
 GRADE_FAIL = "這題暫時無法判定，請再試一次或換個說法"
+FOLLOWUP_FAIL = "這次沒能回答，請再問一次或換個問法"
 PLAN_FAIL = "學習路徑暫時無法產生，請再試一次或換一個 AI 模型"
 INTAKE_FAIL = "暫時無法產生問題，請再試一次或換一個 AI 模型"
 ALLOWED_HOSTS = {"127.0.0.1", "localhost", "[::1]", "testserver"}  # testserver = FastAPI TestClient
@@ -419,6 +422,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             p = store.load(t)
             if kind == "new":
                 p["current"] = node_id
+            p["lastGraded"] = None  # 出了新題，上一題的追問結束
             p["lastQuestion"] = {
                 "id": public.question_id,
                 "node": node_id,
@@ -542,6 +546,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 new_p["stats"] = s
 
             new_p["lastQuestion"] = None
+            # 留下剛判定完的這題，讓學習者對錯都能繼續追問（出下一題時覆蓋）
+            new_p["lastGraded"] = {
+                "id": req.question_id,
+                "node": node_id,
+                "type": qtype,
+                "question": question,
+                "reference": rubric.answer,
+                "result": verdict.result,
+                "feedback": verdict.feedback,
+                "answer": guardrails.mask_pii(req.answer)[:3000],
+            }
             store.save(t, new_p)
             # delta / 節點狀態一律以存檔前後該節點 score 差計算（複習題與新題相同）
             final = _node_state(new_p, node_id)
@@ -556,6 +571,32 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             misconception_label=mis_label,
             reference_answer=rubric.answer,
         )
+
+    # ----- AI：判定後追問 -----
+    @app.post("/topics/{t}/followup", response_model=FollowupResponse)
+    def post_followup(t: str, req: FollowupRequest, request: Request):
+        _check_topic(t)
+        p = _load(t)
+        lg = p.get("lastGraded")
+        if not isinstance(lg, dict) or lg.get("id") != req.question_id:
+            raise ApiError(409, "這題的討論已經結束（已經出了下一題），可以在新題目判定後再追問")
+        if not req.message.strip():
+            raise ApiError(400, "請先輸入想問的問題")
+        _limit(request, req.ai)
+        ctx = tasks.FollowupContext(
+            question=str(lg.get("question") or ""),
+            qtype=str(lg.get("type") or "explain"),
+            reference=str(lg.get("reference") or ""),
+            result=str(lg.get("result") or ""),
+            feedback=str(lg.get("feedback") or ""),
+            answer=str(lg.get("answer") or ""),
+            history=[x.model_copy(update={"text": guardrails.mask_pii(x.text)}) if x.role == "me" else x for x in req.history],
+            message=guardrails.mask_pii(req.message),
+        )
+        reply = _call_ai(lambda: tasks.run_followup(providers.get_provider(req.ai.provider), req.ai, ctx))
+        if reply is None:
+            raise ApiError(503, _fail(FOLLOWUP_FAIL))
+        return FollowupResponse(answer=reply.answer)
 
     # ----- 作答日誌 -----
     @app.get("/topics/{t}/journal", response_model=JournalResponse)

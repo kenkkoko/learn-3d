@@ -625,3 +625,19 @@ textarea, input { caret-color: var(--accent); }
 
 .sdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; background: var(--faint); flex: none; }
 .d-high, .d-ok { background: var(--ok); } .d-mid, .d-partial { background: var(--warn); } .d-low, .d-wrong { background: var(--danger); }
+
+/* ---- 判定後追問 ---- */
+.followup .form-msg { min-height: 0; margin: 0; }
+.followup .form-msg:empty { display: none; }
+.followup { display: grid; gap: 10px; margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.fu-title { font-size: 13px; color: var(--muted); font-weight: 600; }
+.fu-thread { display: grid; gap: 10px; }
+.fu-thread:empty { display: none; }
+.fu-msg { display: grid; gap: 4px; padding: 10px 12px; border-radius: 12px; }
+.fu-me { background: var(--glass-2); margin-left: 32px; }
+.fu-ai { background: rgba(240,164,106,.07); border: 1px solid rgba(240,164,106,.18); margin-right: 16px; }
+.fu-who { font-size: 12px; color: var(--muted); }
+.fu-text { font-size: 14px; line-height: 1.75; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
+.fu-wait .fu-text { color: var(--muted); }
+.fu-input { width: 100%; min-height: 64px; resize: vertical; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(0,0,0,.25); font-size: 14px; line-height: 1.6; }
+.fu-input:focus { outline: none; border-color: rgba(240,164,106,.5); }

@@ -152,6 +152,9 @@ async function mockRoute(method, path, body) {
       if (body?.review) l.kind = "review";
       return l;
     }
+    if (sub === "/followup") {
+      return { answer: "（示範模式）連上本機橋接後，這裡會由你的 AI 針對這一題回答追問：例如為什麼要這樣寫、換個情況會怎樣、能不能再舉一個例子。" };
+    }
     if (sub === "/grade") {
       await wait(1500);
       const g = await mockJson(mockName("grade", t));
@@ -221,6 +224,7 @@ export const api = {
   plan: (req) => call("POST", "/plan", req, { timeout: 600000 }),
   lesson: (t, req) => call("POST", `/topics/${encodeURIComponent(t)}/lesson`, req, { timeout: 180000 }),
   grade: (t, req) => call("POST", `/topics/${encodeURIComponent(t)}/grade`, req, { timeout: 180000 }),
+  followup: (t, req) => call("POST", `/topics/${encodeURIComponent(t)}/followup`, req, { timeout: 180000 }),
   jump: (t, node) => call("POST", `/topics/${encodeURIComponent(t)}/jump`, { node }),
   reset: (t) => call("POST", `/topics/${encodeURIComponent(t)}/reset`, { confirm: "reset" }),
   journal: (t, { limit = 30, before, node } = {}) => {

@@ -271,3 +271,22 @@ def normalize_verdict(v: Verdict, ctx: GradeContext) -> Verdict:
     elif result == "partial" and not met:
         result = "wrong"
     return v if result == v.result else v.model_copy(update={"result": result})
+
+
+# ---------- 判定後追問 ----------
+@dataclass
+class FollowupContext:
+    question: str
+    qtype: str
+    reference: str
+    result: str
+    feedback: str
+    answer: str
+    history: list
+    message: str
+
+
+def run_followup(llm: LLMProvider, ai: AiChoice, ctx: FollowupContext):
+    from .schemas import FollowupReply
+    system, user = prompts.followup_prompt(ctx)
+    return call_structured(llm, FollowupReply, system, user, task="followup", ai=ai)
