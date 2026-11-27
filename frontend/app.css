@@ -696,7 +696,8 @@ textarea, input { caret-color: var(--accent); }
   box-shadow: 0 30px 80px rgba(0,0,0,.55);
 }
 .auth-mark { width: 56px; height: 56px; filter: drop-shadow(0 0 18px rgba(240,164,106,.45)); }
-.auth-card h1 { color: var(--ink); font-size: 26px; margin: 12px 0 8px; }
+.auth-card h1 { color: var(--ink); font-size: 30px; letter-spacing: .08em; margin: 12px 0 2px; }
+.auth-tag { margin: 0 0 14px; font-size: 13px; color: var(--muted); letter-spacing: .02em; }
 .auth-lead { font-size: 14px; line-height: 1.7; margin: 0 0 22px; }
 .auth-google { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 46px; font-size: 15px; }
 .auth-google svg { width: 18px; height: 18px; }
@@ -705,3 +706,4 @@ textarea, input { caret-color: var(--accent); }
 @media (prefers-reduced-motion: no-preference) {
   .auth-card { animation: dlgIn .45s var(--ease); }
 }
+.auth-card .fineprint a { color: var(--accent); }

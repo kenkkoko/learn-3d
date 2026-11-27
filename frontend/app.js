@@ -2053,7 +2053,7 @@ function showInitialTopic() {
   else {
     $("#topicView").hidden = true;
     $("#emptyState").hidden = false;
-    $("#mobileTitle").textContent = "Learn 3D";
+    $("#mobileTitle").textContent = "LEA";
   }
 }
 
