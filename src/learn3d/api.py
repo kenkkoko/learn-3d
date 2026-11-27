@@ -27,10 +27,12 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import __version__, guardrails, providers, scoring, store, tasks
+from . import __version__, guardrails, providers, scoring, store, sync, tasks
 from .config import HOST, Settings, get_settings
 from .schemas import (
     FollowupRequest,
+    SyncImportRequest,
+    SyncMarkRequest,
     FollowupResponse,
     AiChoice,
     ConfirmRequest,
@@ -234,17 +236,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "Access-Control-Allow-Origin": origin,
                 "Vary": "Origin",
                 "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
-                "Access-Control-Allow-Headers": "content-type",
+                "Access-Control-Allow-Headers": "content-type, x-learn3d-user",
                 "Access-Control-Allow-Private-Network": "true",
                 "Access-Control-Max-Age": "600",
             }
         if request.method == "OPTIONS":
             return Response(status_code=204, headers=cors)
+        user_token = store.set_user(request.headers.get("x-learn3d-user"))
         try:
             response = await call_next(request)
         except Exception:  # noqa: BLE001 —— 讓 500 也帶 CORS 與 ErrorResponse 格式
             log.exception("未預期的錯誤：%s %s", request.method, request.url.path)
             response = _err(500, "橋接發生未預期的錯誤，請看橋接視窗的訊息")
+        finally:
+            store.reset_user(user_token)
         response.headers.update(cors)
         return response
 
@@ -282,7 +287,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         from pathlib import Path as _P
         # 從 git 資料夾直接跑的開發版不能「一鍵更新」（要 git pull），網站據此顯示不同的說明
         kind = "git" if (_P(__file__).resolve().parents[2] / ".git").exists() else "installed"
-        return {"ok": True, "name": "learn3d-bridge", "version": __version__, "build": build_id(), "kind": kind}
+        return {"ok": True, "name": "learn3d-bridge", "version": __version__, "build": build_id(), "kind": kind, "sync": 1}
 
     @app.get("/usage")
     def get_usage():
@@ -599,12 +604,45 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return FollowupResponse(answer=reply.answer)
 
     # ----- 作答日誌 -----
+    # ----- 跨裝置同步（雲端由網站處理；這裡只讀寫本機檔案） -----
+    @app.get("/sync/manifest")
+    def sync_manifest():
+        return sync.manifest()
+
+    @app.get("/sync/topics/{t}")
+    def sync_export(t: str):
+        return sync.export_bundle(store.check_topic_name(t))
+
+    @app.post("/sync/topics/{t}/import")
+    def sync_import(t: str, req: SyncImportRequest):
+        return sync.import_bundle(t, req.bundle, req.cloud_at, journal_only=req.journal_only)
+
+    @app.post("/sync/topics/{t}/mark")
+    def sync_mark(t: str, req: SyncMarkRequest):
+        sync.mark(t, req.cloud_at, req.hash)
+        return {"ok": True}
+
+    @app.post("/sync/topics/{t}/forget")
+    def sync_forget(t: str):
+        sync.forget(t)
+        return {"ok": True}
+
+    @app.post("/sync/topics/{t}/drop")
+    def sync_drop(t: str):
+        sync.drop(t)
+        return {"ok": True}
+
+    @app.post("/sync/claim")
+    def sync_claim():
+        return sync.claim()
+
     @app.get("/topics/{t}/journal", response_model=JournalResponse)
-    def get_journal(t: str, limit: int = 30, before: str | None = None, node: str | None = None):
+    def get_journal(t: str, limit: int = 30, before: str | None = None, node: str | None = None,
+                    only: str | None = None):
         _check_topic(t)
         if not store.exists(t):
             raise store.TopicNotFound(t)
-        rows, more = store.journal_read(t, limit=limit, before=before, node=node)
+        rows, more = store.journal_read(t, limit=limit, before=before, node=node, only=only)
         return JournalResponse(entries=[e for e in (_journal_model(r) for r in rows) if e is not None], has_more=more)
 
     # ----- 跳轉 / 重設 / 刪除 -----

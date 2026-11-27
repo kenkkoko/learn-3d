@@ -309,3 +309,17 @@ class ConfirmRequest(_Strict):
 class ErrorResponse(_Strict):
     error: str
     needs_confirm: bool = False
+
+
+# ---------- 跨裝置同步 ----------
+class SyncImportRequest(BaseModel):
+    """雲端的主題內容（progress / lessons / env_sql / journal），格式由 sync._check_bundle 驗證。"""
+
+    bundle: dict
+    cloud_at: str | None = Field(default=None, max_length=64)
+    journal_only: bool = False
+
+
+class SyncMarkRequest(BaseModel):
+    cloud_at: str = Field(max_length=64)
+    hash: str = Field(max_length=64)

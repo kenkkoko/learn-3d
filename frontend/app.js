@@ -1,5 +1,5 @@
 // Learn 3D 前端主程式：三欄 UI、主題房間、3D 星雲、問答面板（docs/interfaces.md §7）
-import { api, ApiError, getMode, useMock, useBridge, isForcedMock, probeBridge, loopbackPermission } from "./api.js";
+import { api, ApiError, getMode, useMock, useCloud, useBridge, isForcedMock, probeBridge, loopbackPermission, setUser, NEEDS_BRIDGE } from "./api.js";
 import { runCode, buildExec } from "./runners/index.js";
 import { queryTable } from "./runners/sql.js";
 
@@ -103,8 +103,16 @@ const bridgeUi = { perm: null, info: null, note: "", update: null };
 function setBridgeStatus(kind, note = "") {
   state.bridge = kind;
   bridgeUi.note = note;
-  $("#mockBadge").hidden = getMode() !== "mock";
+  const mb = $("#mockBadge");
+  mb.hidden = getMode() === "bridge";
+  mb.textContent = getMode() === "cloud" ? "複習模式" : "示範資料";
+  mb.title = getMode() === "cloud" ? "沒有連上本機橋接：可以看主題與作答紀錄，不能出題" : "";
+  app.classList.toggle("cloud-mode", getMode() === "cloud");
   renderBridgeUi();
+}
+/** 沒有橋接時：登入了就看雲端（複習模式），只有 ?mock=1 才用示範資料 */
+function useFallback() {
+  if (isForcedMock()) useMock(); else useCloud();
 }
 
 /** 左下角按鈕 + 對話框：只從 state.bridge / bridgeUi / state.providers 畫出來 */
@@ -136,9 +144,9 @@ function renderBridgeUi() {
   const sub = bridgeUi.note
     || (kind === "ok" ? `${ver} · 127.0.0.1:8766。出題與判定會用你電腦上的 AI。`
       : kind === "checking" || kind === "mock" ? ""
-      : bridgeUi.perm === "denied" ? "已安裝就按「啟動橋接」；如果橋接已經開著還是連不上，看下面「瀏覽器擋住」的說明。現在先用示範資料（英文文法）瀏覽。"
-      : bridgeUi.perm === "prompt" ? "按「連線到本機橋接」；瀏覽器會詢問是否允許存取本機網路，請選允許。現在先用示範資料（英文文法）瀏覽。"
-      : "現在先用示範資料（英文文法）瀏覽；啟動橋接後會自動接上。");
+      : bridgeUi.perm === "denied" ? "已安裝就按「啟動橋接」；如果橋接已經開著還是連不上，看下面「瀏覽器擋住」的說明。現在是複習模式：可以看主題和作答紀錄。"
+      : bridgeUi.perm === "prompt" ? "按「連線到本機橋接」；瀏覽器會詢問是否允許存取本機網路，請選允許。現在是複習模式：可以看主題和作答紀錄。"
+      : "現在是複習模式（可以看主題和作答紀錄）；啟動橋接後會自動接上。");
   $("#bdStatusSub").textContent = sub;
   $("#bdStatusSub").hidden = !sub;
 
@@ -256,27 +264,34 @@ async function detectBridge({ userGesture = false } = {}) {
   if (perm === "denied") {
     // 有些瀏覽器版本回報的權限狀態不準：還是試連一次，連得上就用
     const r = await probeBridge();
-    if (r.ok) { bridgeUi.perm = "granted"; useBridge(); bridgeUi.info = r.info || null; setBridgeStatus("ok"); checkBridgeUpdate(r.info); return; }
-    useMock();
+    if (r.ok && (r.info?.sync || isForcedMock())) { bridgeUi.perm = "granted"; useBridge(); bridgeUi.info = r.info || null; setBridgeStatus("ok"); checkBridgeUpdate(r.info); return; }
+    useFallback();
     setBridgeStatus("off");
     return;
   }
   // 權限還沒決定時，載入頁面不自動連線（避免一進站就跳瀏覽器的權限詢問），也不跳任何面板：
   // 左下角按鈕顯示「未連線」，使用者自己按了才連。
   if (perm === "prompt" && !userGesture) {
-    useMock();
+    useFallback();
     setBridgeStatus("off");
     return;
   }
   const r = await probeBridge();
   if (r.ok) {
-    useBridge();
     bridgeUi.info = r.info || null;
     bridgeUi.perm = await loopbackPermission();
+    if (r.info && !r.info.sync && !isForcedMock()) {
+      // 舊版橋接不認得帳號：先用複習模式，請使用者更新
+      useCloud();
+      setBridgeStatus("ok", "橋接是舊版，不支援帳號同步：請按下面的更新，更新後才能出題。現在先用複習模式。");
+      checkBridgeUpdate(r.info);
+      return;
+    }
+    useBridge();
     setBridgeStatus("ok");
     checkBridgeUpdate(r.info);
   } else {
-    useMock();
+    useFallback();
     bridgeUi.info = null;
     setBridgeStatus("off");
   }
@@ -426,6 +441,17 @@ async function selectTopic(slug) {
     return;
   }
   renderTopic(true);
+  if (getMode() === "cloud") showCloudPanel();
+}
+
+/** 複習模式：右側面板直接顯示紀錄，問答分頁放說明 */
+function showCloudPanel() {
+  setPanelHead("複習模式", "作答紀錄");
+  qa.replaceChildren(h("div", { class: "qa-empty cloud-note" },
+    h("p", null, h("b", null, "現在是複習模式")),
+    h("p", null, "可以看主題星雲和每一題的作答紀錄（題目、你的答案、回饋、參考答案）。"),
+    h("p", null, "要出新題目，請在電腦上開著本機橋接，AI 在你的電腦上執行。")));
+  showPanelTab("journal");
 }
 
 function renderTopic(rebuildScene = false) {
@@ -800,7 +826,8 @@ applyLayout();
 // ======================================================================
 // 作答日誌（右側面板「紀錄」分頁）
 // ======================================================================
-const journal = { rows: [], hasMore: false, onlyCurrent: false, stale: true, loading: false };
+const journal = { rows: [], hasMore: false, onlyCurrent: false, only: "", stale: true, loading: false };
+const JOURNAL_ONLY = [["", "全部"], ["wrong", "答錯或部分對"], ["unsure", "沒把握的"], ["danger", "危險迷思"]];
 
 function showPanelTab(name) {
   const isQa = name === "qa";
@@ -833,7 +860,7 @@ async function loadJournal(reset) {
   try {
     const node = journal.onlyCurrent ? state.progress?.current : undefined;
     const before = reset ? undefined : journal.rows.at(-1)?.id;
-    const r = await api.journal(state.topic, { limit: 20, before, node });
+    const r = await api.journal(state.topic, { limit: 20, before, node, only: journal.only || undefined });
     journal.rows = reset ? r.entries : journal.rows.concat(r.entries);
     journal.hasMore = r.has_more;
     journal.stale = false;
@@ -853,10 +880,15 @@ function renderJournal() {
     h("input", { type: "checkbox", checked: journal.onlyCurrent || null,
       onchange: (ev) => { journal.onlyCurrent = ev.target.checked; loadJournal(true); } }),
     ` 只看目前節點${cur ? `（${cur.name}）` : ""}`);
-  const head = h("div", { class: "jr-head" }, filter,
-    h("span", { class: "jr-note" }, "存在你電腦的 ~/.claude/learn-data/<主題>/journal.jsonl"));
+  const only = h("label", { class: "jr-only" }, h("span", { class: "sr-only" }, "篩選紀錄"),
+    h("select", { onchange: (ev) => { journal.only = ev.target.value; loadJournal(true); } },
+      ...JOURNAL_ONLY.map(([v, label]) => h("option", { value: v, selected: v === journal.only || null }, label))));
+  const head = h("div", { class: "jr-head" }, h("div", { class: "jr-filters" }, only, filter),
+    h("span", { class: "jr-note" }, account.user ? "已同步到你的帳號，電腦和手機都看得到" : "存在你電腦的 ~/.claude/learn-data/<主題>/journal.jsonl"));
   if (!journal.rows.length) {
-    box.replaceChildren(head, h("p", { class: "qa-empty" }, "還沒有紀錄。答完一題，題目、你的答案和回饋就會出現在這裡。"));
+    box.replaceChildren(head, h("p", { class: "qa-empty" }, journal.only || journal.onlyCurrent
+      ? "沒有符合篩選的紀錄。"
+      : "還沒有紀錄。答完一題，題目、你的答案和回饋就會出現在這裡。"));
     return;
   }
   const groups = new Map();
@@ -919,8 +951,15 @@ function setPanelHead(eyebrow, title) {
   $("#panelTitle").textContent = title;
 }
 
+function needsBridge() {
+  if (getMode() !== "cloud") return false;
+  toast(NEEDS_BRIDGE, true);
+  return true;
+}
+
 async function startLesson(req = {}, trigger) {
   if (!state.topic) return;
+  if (needsBridge()) return;
   openPanel(trigger || document.activeElement);
   showPanelTab("qa");
   state.lastReq = req;
@@ -1587,6 +1626,7 @@ function ntStep(n) {
 }
 
 function openNewTopic() {
+  if (needsBridge()) return;
   closeDrawer();
   nt.intake = null;
   nt.planning = false;
@@ -1810,6 +1850,7 @@ document.addEventListener("click", (ev) => {
   if (ev.target.closest('[data-action="new-topic"]')) openNewTopic();
 });
 $("#continueBtn").addEventListener("click", (ev) => startLesson({}, ev.currentTarget));
+$("#journalBtn").addEventListener("click", (ev) => { openPanel(ev.currentTarget); showPanelTab("journal"); });
 $("#reviewBtn").addEventListener("click", (ev) => startLesson({ review: true }, ev.currentTarget));
 $("#view3d").addEventListener("click", () => setView("3d"));
 $("#viewList").addEventListener("click", () => setView("list"));
@@ -1822,6 +1863,8 @@ $("#scrim").addEventListener("click", closeDrawer);
 $("#refreshProviders").addEventListener("click", () => loadProviders(true));
 async function onBridgeReady() {
   state.envCache.clear();
+  renderAccount();
+  await syncOnConnect();
   await Promise.all([loadProviders(), loadTopics()]);
   refreshUsage();
   showInitialTopic();
@@ -1996,7 +2039,7 @@ setInterval(async () => {
   } else if (state.bridge === "off" || state.bridge === "lost") {
     if ((await loopbackPermission()) === "prompt") return;   // 還沒授權本機連線時不偷偷連
     if ((await probeBridge()).ok) {
-      const wasMock = getMode() === "mock";
+      const wasMock = getMode() !== "bridge";
       await detectBridge({ userGesture: true });
       if (state.bridge === "ok") { toast("已連上本機橋接"); if (wasMock) await onBridgeReady(); else await loadProviders(); }
     }
@@ -2017,9 +2060,170 @@ function showInitialTopic() {
 // ======================================================================
 // 啟動
 // ======================================================================
+// ======================================================================
+// 帳號（Google 登入）與跨裝置同步
+// ======================================================================
+const account = { user: null, cloud: null, sync: null, syncState: "idle", syncNote: "", lastSync: 0 };
+
+function renderAccount() {
+  const box = $("#account");
+  if (!account.user) { box.hidden = true; return; }
+  box.hidden = false;
+  const u = account.user;
+  const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email || "";
+  const st = getMode() !== "bridge" ? { cls: "off", text: "複習模式：只看雲端資料" }
+    : account.syncState === "syncing" ? { cls: "busy", text: "同步中…" }
+    : account.syncState === "error" ? { cls: "err", text: "同步失敗，按這裡重試" }
+    : account.lastSync ? { cls: "ok", text: `已同步 · ${new Date(account.lastSync).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false })}` }
+    : { cls: "off", text: "尚未同步" };
+  $("#accountName").textContent = name;
+  $("#accountName").title = u.email || "";
+  const av = $("#accountAvatar");
+  av.textContent = (name || "?").trim().charAt(0).toUpperCase();
+  const syncBtn = $("#accountSync");
+  syncBtn.dataset.state = st.cls;
+  syncBtn.textContent = st.text;
+  syncBtn.title = account.syncNote || st.text;
+  syncBtn.disabled = getMode() !== "bridge" || account.syncState === "syncing";
+}
+
+async function runSyncAll({ quiet = false } = {}) {
+  if (getMode() !== "bridge" || !account.user || !account.sync) return false;
+  account.syncState = "syncing"; renderAccount();
+  try {
+    const r = await account.sync.syncAll();
+    account.lastSync = Date.now();
+    account.syncState = r.errors.length ? "error" : "ok";
+    account.syncNote = r.errors.join("\n");
+    if (r.errors.length && !quiet) toast(`有主題同步失敗：${r.errors[0]}`, true);
+    renderAccount();
+    return r.changed;
+  } catch (e) {
+    account.syncState = "error";
+    account.syncNote = errMsg(e);
+    if (!quiet) toast(`同步失敗：${errMsg(e)}`, true);
+    renderAccount();
+    return false;
+  }
+}
+
+/** 本機改了某個主題（作答、規劃、重設、刪除）→ 1.5 秒後上傳 */
+const pendingSync = new Map();
+addEventListener("learn3d:changed", (ev) => {
+  const t = ev.detail?.topic;
+  if (!t || !account.user || !account.sync) return;
+  clearTimeout(pendingSync.get(t));
+  pendingSync.set(t, setTimeout(async () => {
+    pendingSync.delete(t);
+    if (getMode() !== "bridge") return;
+    account.syncState = "syncing"; renderAccount();
+    try {
+      await account.sync.syncTopic(t);
+      account.lastSync = Date.now();
+      account.syncState = "ok"; account.syncNote = "";
+    } catch (e) {
+      account.syncState = "error"; account.syncNote = errMsg(e);
+    }
+    renderAccount();
+  }, 1500));
+});
+
+/** 回到這個分頁時：超過 1 分鐘沒同步就同步一次，有變動就重新整理畫面 */
+async function syncAndRefresh() {
+  if (Date.now() - account.lastSync < 60000 || account.syncState === "syncing") return;
+  if (await runSyncAll({ quiet: true })) await refreshTopicsAfterSync();
+}
+async function refreshTopicsAfterSync() {
+  await loadTopics();
+  if (state.topic && state.topics.some((t) => t.topic === state.topic)) {
+    if (!state.lesson) selectTopic(state.topic);
+  } else {
+    showInitialTopic();
+  }
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) syncAndRefresh(); });
+
+/** 這台電腦有登入前建立的主題：問要不要歸到目前的帳號 */
+async function askClaim(n) {
+  const key = `learn3d.claimSkip.${account.user.id}`;
+  try { if (localStorage.getItem(key)) return; } catch { /* 忽略 */ }
+  const dlg = $("#claimDialog");
+  $("#claimCount").textContent = String(n);
+  $("#claimEmail").textContent = account.user.email || "這個帳號";
+  dlg.showModal();
+  const v = await new Promise((res) => dlg.addEventListener("close", () => res(dlg.returnValue), { once: true }));
+  if (v === "claim") {
+    try {
+      const r = await api.syncClaim();
+      toast(`已把 ${r.moved.length} 個主題歸到你的帳號`);
+    } catch (e) { toast(errMsg(e), true); }
+  } else {
+    try { localStorage.setItem(key, "1"); } catch { /* 忽略 */ }
+  }
+}
+
+/** 橋接連上（或重新連上）後：先同步，再載入主題 */
+async function syncOnConnect() {
+  if (getMode() !== "bridge" || !account.user || !account.sync) return;
+  try {
+    const m = await api.syncManifest();
+    if (m.legacy > 0) await askClaim(m.legacy);
+  } catch { /* 舊橋接或暫時失敗：照常同步 */ }
+  await runSyncAll();
+}
+
+function showAuthGate(errText = "") {
+  const gate = $("#authGate");
+  gate.hidden = false;
+  $("#authMsg").textContent = errText;
+  $("#authMsg").hidden = !errText;
+  $("#googleLogin").focus();
+}
+
+$("#googleLogin").addEventListener("click", async (ev) => {
+  const btn = ev.currentTarget;
+  if (!account.cloud) return;
+  btn.disabled = true;
+  btn.textContent = "前往 Google 登入…";
+  const { error } = await account.cloud.signInWithGoogle();
+  if (error) {
+    btn.disabled = false;
+    btn.textContent = "用 Google 帳號登入";
+    showAuthGate(`登入失敗：${error.message}`);
+  }
+});
+$("#accountSync").addEventListener("click", async () => {
+  if (await runSyncAll()) await refreshTopicsAfterSync();
+});
+$("#signOut").addEventListener("click", async () => {
+  if (!account.cloud) return;
+  await account.cloud.signOut();
+  location.reload();
+});
+
+/** 登入：回傳使用者；還沒登入就顯示登入畫面並停在這裡（Google 登入會整頁跳轉回來） */
+async function ensureLogin() {
+  try {
+    account.cloud = await import("./cloud.js");
+  } catch (e) {
+    showAuthGate("載入登入元件失敗，請確認網路連線後重新整理。");
+    return null;
+  }
+  const u = await account.cloud.loadSession();
+  account.cloud.onAuthChange(() => location.reload());   // 另一個分頁登入 / 登出
+  if (!u) { showAuthGate(); return null; }
+  account.user = u;
+  setUser(u.id);
+  account.sync = await import("./sync.js");
+  return u;
+}
+
 (async function init() {
   if (isForcedMock()) useMock();
+  else if (!(await ensureLogin())) return;
   await detectBridge();
+  renderAccount();
+  await syncOnConnect();
   await Promise.all([loadProviders(), loadTopics()]);
   refreshUsage();
   showInitialTopic();

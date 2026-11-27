@@ -641,3 +641,65 @@ textarea, input { caret-color: var(--accent); }
 .fu-wait .fu-text { color: var(--muted); }
 .fu-input { width: 100%; min-height: 64px; resize: vertical; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(0,0,0,.25); font-size: 14px; line-height: 1.6; }
 .fu-input:focus { outline: none; border-color: rgba(240,164,106,.5); }
+
+/* ---------- 帳號與同步（左欄底部） ---------- */
+.account { display: flex; align-items: center; gap: 10px; padding: 8px 6px 10px; margin-bottom: 4px; border-bottom: 1px solid var(--line-soft); }
+.account-avatar {
+  width: 30px; height: 30px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  font-size: 13px; font-weight: 700; color: var(--ink); background: var(--accent-soft); border: 1px solid rgba(240,164,106,.35);
+}
+.account-main { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 1px; }
+.account-name { font-size: 13px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.account-sync {
+  align-self: flex-start; border: 0; background: transparent; padding: 0; font: inherit; font-size: 12px; color: var(--muted);
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+}
+.account-sync::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--s-unseen); }
+.account-sync[data-state="ok"]::before { background: var(--ok); box-shadow: 0 0 8px rgba(74,222,128,.6); }
+.account-sync[data-state="busy"]::before { background: var(--warn); box-shadow: 0 0 8px rgba(250,204,21,.6); }
+.account-sync[data-state="err"] { color: var(--danger); }
+.account-sync[data-state="err"]::before { background: var(--danger); }
+.account-sync:disabled { cursor: default; }
+.account-sync:not(:disabled):hover { color: var(--ink); }
+.account-out { flex: none; }
+
+/* ---------- 作答紀錄篩選 ---------- */
+.jr-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.jr-only select { padding: 5px 28px 5px 10px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.cloud-note p { margin: 0 0 8px; }
+
+/* 複習模式（沒有橋接）：藏起出題、規劃、重設、刪除；手機上也不顯示橋接按鈕（手機不能跑橋接） */
+.cloud-only { display: none; }
+.cloud-mode .cloud-only { display: inline-flex; }
+.cloud-mode h1.cloud-only, .cloud-mode p.cloud-only { display: block; }
+.cloud-mode .bridge-only { display: none; }
+.cloud-mode #continueBtn, .cloud-mode #reviewBtn, .cloud-mode .new-topic, .cloud-mode [data-action="new-topic"],
+.cloud-mode #topicMenuBtn { display: none !important; }
+@media (max-width: 767px) { .cloud-mode .bridge-fab { display: none; } }
+
+/* ---------- 登入畫面 ---------- */
+.auth-gate {
+  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 24px;
+  background:
+    radial-gradient(40% 35% at 30% 35%, rgba(240,164,106,.16), transparent 70%),
+    radial-gradient(35% 30% at 70% 65%, rgba(74,222,128,.10), transparent 70%),
+    radial-gradient(30% 30% at 60% 25%, rgba(250,204,21,.07), transparent 70%),
+    var(--bg);
+}
+.auth-gate[hidden] { display: none; }
+.auth-card {
+  width: min(400px, 100%); padding: 32px 28px 24px; border-radius: 24px; text-align: center;
+  background: rgba(255,255,255,.05); border: 1px solid var(--line); backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: 0 30px 80px rgba(0,0,0,.55);
+}
+.auth-mark { width: 56px; height: 56px; filter: drop-shadow(0 0 18px rgba(240,164,106,.45)); }
+.auth-card h1 { color: var(--ink); font-size: 26px; margin: 12px 0 8px; }
+.auth-lead { font-size: 14px; line-height: 1.7; margin: 0 0 22px; }
+.auth-google { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 46px; font-size: 15px; }
+.auth-google svg { width: 18px; height: 18px; }
+.auth-card .fineprint { margin: 16px 0 0; }
+.auth-card .form-msg { color: var(--danger); margin-top: 12px; }
+@media (prefers-reduced-motion: no-preference) {
+  .auth-card { animation: dlgIn .45s var(--ease); }
+}
