@@ -676,6 +676,8 @@ textarea, input { caret-color: var(--accent); }
 .cloud-mode .bridge-only { display: none; }
 .cloud-mode #continueBtn, .cloud-mode #reviewBtn, .cloud-mode .new-topic, .cloud-mode [data-action="new-topic"],
 .cloud-mode #topicMenuBtn { display: none !important; }
+/* 作答紀錄按鈕：電腦上是次要按鈕；複習模式（沒有出題）時變成主要按鈕 */
+.cloud-mode #journalBtn { background: var(--ink); color: #0b0b0d; border-color: var(--ink); }
 @media (max-width: 767px) { .cloud-mode .bridge-fab { display: none; } }
 
 /* ---------- 登入畫面 ---------- */
