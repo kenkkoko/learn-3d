@@ -2053,7 +2053,7 @@ function showInitialTopic() {
   else {
     $("#topicView").hidden = true;
     $("#emptyState").hidden = false;
-    $("#mobileTitle").textContent = "LEA";
+    $("#mobileTitle").textContent = "Learn Everything with AI";
   }
 }
 
