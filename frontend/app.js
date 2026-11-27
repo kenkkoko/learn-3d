@@ -882,7 +882,7 @@ function journalItem(e) {
   return h("details", { class: `jr-item r-${e.result}` },
     h("summary", null,
       h("span", { class: "jr-res" }, sdot(e.result), RESULT_TEXT[e.result] || e.result),
-      e.danger ? h("span", { class: "jr-danger" }, "🚨 危險迷思") : null,
+      e.danger ? h("span", { class: "jr-danger" }, sdot("wrong"), "危險迷思") : null,
       h("span", { class: "jr-node" }, e.node_name || e.node),
       h("span", { class: "jr-meta" }, `${time} · ${TYPE_TEXT[e.type] || e.type}${e.kind === "review" ? " · 複習" : ""}`),
       h("span", { class: "jr-q" }, e.question)),
@@ -1445,7 +1445,7 @@ function renderVerdict(l, res, execRes, conf, box) {
   parts.push(h("div", { class: "v-result" }, sdot(r), RESULT_TEXT[r] || r, delta));
   if (res.danger) {
     parts.push(h("div", { class: "v-danger", role: "alert" },
-      "🚨 危險迷思：你選了「有把握」，但答案錯了。這種「以為自己會」的觀念最需要修正，已經記進迷思筆記，之後會換個情境再考你。"));
+      "危險迷思：你選了「有把握」，但答案錯了。這種「以為自己會」的觀念最需要修正，已經記進迷思筆記，之後會換個情境再考你。"));
   }
   if (r === "unjudgeable") parts.push(h("div", { class: "notice" }, "無法判定，請換個說法或看參考答案。"));
   if (res.feedback) parts.push(h("p", { class: "v-feedback", text: res.feedback }));
@@ -1462,6 +1462,7 @@ function renderVerdict(l, res, execRes, conf, box) {
   if (res.misconception_label) {
     parts.push(h("div", null, h("span", { class: "mis-tag" }, "迷思筆記：", h("span", { text: res.misconception_label }))));
   }
+  if (!res.offtopic && !res.fallback) parts.push(followupBox(l));
   parts.push(h("div", { class: "v-actions" },
     h("button", { type: "button", class: "btn btn-primary", onclick: () => startLesson(nextReq()) }, "下一題"),
     h("button", { type: "button", class: "btn btn-ghost", onclick: closePanel }, "先到這")));
@@ -1471,6 +1472,48 @@ function renderVerdict(l, res, execRes, conf, box) {
   // 只捲動問答面板本身（scrollIntoView 會連整頁一起捲）
   const top = v.getBoundingClientRect().top - qa.getBoundingClientRect().top + qa.scrollTop - 12;
   qa.scrollTo({ top, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}
+
+/**
+ * 判定後追問：不管對錯，都能針對這一題一直往下問（為什麼、那如果…、再舉個例子）。
+ * 對話只在這一題有效；出下一題就結束。
+ */
+function followupBox(l) {
+  const topic = state.topic;
+  const history = [];
+  const thread = h("div", { class: "fu-thread", "aria-live": "polite" });
+  const ta = h("textarea", { class: "fu-input", rows: "2", maxlength: "1000", placeholder: "還有不懂的？直接問，例如：為什麼不能這樣寫？換成別的情況會怎樣？（Ctrl + Enter 送出）", "aria-label": "追問這一題" });
+  const msg = h("div", { class: "form-msg err", role: "alert" });
+  const btn = h("button", { type: "submit", class: "btn btn-ghost" }, "追問");
+  const bubble = (role, text) => h("div", { class: `fu-msg fu-${role}` },
+    h("div", { class: "fu-who" }, role === "me" ? "你" : "AI 家教"), h("div", { class: "fu-text", text }));
+  const send = async (ev) => {
+    ev?.preventDefault();
+    const text = ta.value.trim();
+    if (!text || btn.disabled) { if (!text) ta.focus(); return; }
+    msg.textContent = "";
+    btn.disabled = true; ta.disabled = true;
+    thread.append(bubble("me", text));
+    const wait = h("div", { class: "fu-msg fu-ai fu-wait" }, h("div", { class: "fu-who" }, "AI 家教"), h("div", { class: "fu-text" }, "思考中…"));
+    thread.append(wait);
+    try {
+      const r = await api.followup(topic, { question_id: l.question_id, message: text, history: history.slice(-12), ai: aiChoice("daily") });
+      wait.replaceWith(bubble("ai", r.answer));
+      history.push({ role: "me", text }, { role: "ai", text: r.answer });
+      ta.value = "";
+      refreshUsage();
+    } catch (e) {
+      wait.remove();
+      thread.lastChild?.remove();          // 拿掉沒送成功的那句，內容留在輸入框
+      msg.textContent = bridgeErrorText(e);
+    } finally {
+      btn.disabled = false; ta.disabled = false; ta.focus();
+    }
+  };
+  ta.addEventListener("keydown", (ev) => { if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) send(ev); });
+  return h("form", { class: "followup", onsubmit: send },
+    h("div", { class: "fu-title" }, "追問這一題"),
+    thread, ta, msg, h("div", { class: "row end" }, btn));
 }
 
 function nextReq() {

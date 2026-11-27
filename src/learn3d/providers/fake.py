@@ -96,6 +96,7 @@ _SAMPLES = {
     "LearningMap": _sample_map,
     "Lesson": _sample_lesson,
     "Verdict": _sample_verdict,
+    "FollowupReply": lambda: {"answer": "測試用追問回答：用一個生活例子來說明這個觀念。"},
 }
 
 

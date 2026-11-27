@@ -228,6 +228,30 @@ class GradeRequest(_Strict):
     ai: AiChoice
 
 
+class FollowupTurn(_Strict):
+    role: Literal["me", "ai"]
+    text: str = Field(min_length=1, max_length=3000)
+
+
+class FollowupRequest(_Strict):
+    """判定後追問：同一題可以一直往下問（對或錯都可以）。"""
+
+    question_id: str
+    message: str = Field(min_length=1, max_length=1000)
+    history: list[FollowupTurn] = Field(default_factory=list, max_length=20)
+    ai: AiChoice
+
+
+class FollowupReply(_Strict):
+    """LLM 輸出：追問的回答。"""
+
+    answer: str = Field(min_length=1, max_length=2000)
+
+
+class FollowupResponse(_Strict):
+    answer: str
+
+
 class NodeState(_Strict):
     id: str
     status: NodeStatus
