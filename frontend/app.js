@@ -8,8 +8,10 @@ const SETTINGS_KEY = "learn3d.settings.v1";
 
 const STATUS_TEXT = { unseen: "未學", weak: "不熟", shaky: "半熟", mastered: "熟練" };
 const TYPE_TEXT = { predict: "預測結果", debug: "找錯並修正", explain: "用自己的話解釋", produce: "動手寫" };
-const CONF_TEXT = { high: "🟢 有把握", mid: "🟡 不太確定", low: "🔴 用猜的" };
-const RESULT_TEXT = { ok: "✅ 正確", partial: "🟡 部分正確", wrong: "❌ 錯誤", unjudgeable: "❔ 無法判定" };
+const CONF_TEXT = { high: "有把握", mid: "不太確定", low: "用猜的" };
+const RESULT_TEXT = { ok: "正確", partial: "部分正確", wrong: "錯誤", unjudgeable: "無法判定" };
+/** 狀態小圓點（取代 emoji 圖示） */
+const sdot = (kind) => h("i", { class: `sdot d-${kind}`, "aria-hidden": "true" });
 const FALLBACK_MSG = "這題暫時無法產生／判定，請再試一次或換一個節點";
 
 // ---------- 小工具 ----------
@@ -597,7 +599,7 @@ function renderNodeCard() {
       hist.length
         ? h("ul", { class: "nc-hist" }, hist.map((x) => h("li", null,
           h("span", null, x.date || ""), h("span", null, TYPE_TEXT[x.type] || x.type || ""),
-          h("span", null, (CONF_TEXT[x.confidence] || "").slice(0, 2)), h("span", null, RESULT_TEXT[x.result] || x.result || ""))))
+          h("span", { title: CONF_TEXT[x.confidence] || "" }, sdot(x.confidence)), h("span", null, sdot(x.result), RESULT_TEXT[x.result] || x.result || ""))))
         : h("div", { class: "muted", style: "font-size:13px" }, "還沒練過")),
     h("div", { class: "nc-sec" }, h("h3", null, "相關迷思"),
       mis.length
@@ -879,7 +881,7 @@ function journalItem(e) {
     h(mono ? "pre" : "p", { class: mono ? "code" : "jr-text", text })) : null;
   return h("details", { class: `jr-item r-${e.result}` },
     h("summary", null,
-      h("span", { class: "jr-res" }, RESULT_TEXT[e.result] || e.result),
+      h("span", { class: "jr-res" }, sdot(e.result), RESULT_TEXT[e.result] || e.result),
       e.danger ? h("span", { class: "jr-danger" }, "🚨 危險迷思") : null,
       h("span", { class: "jr-node" }, e.node_name || e.node),
       h("span", { class: "jr-meta" }, `${time} · ${TYPE_TEXT[e.type] || e.type}${e.kind === "review" ? " · 複習" : ""}`),
@@ -888,14 +890,14 @@ function journalItem(e) {
       block("題目", e.question, false),
       block("你的答案", e.answer, isCode),
       h("div", { class: "jr-facts" },
-        h("span", null, CONF_TEXT[e.confidence] || e.confidence),
+        h("span", null, sdot(e.confidence), CONF_TEXT[e.confidence] || e.confidence),
         h("span", null, `分數 ${e.delta > 0 ? "+" : ""}${e.delta}`),
         e.source === "skill" ? h("span", null, "來自 Claude Code") : null),
       block("回饋", e.feedback, false),
       e.exec_user || e.exec_ref ? h("div", { class: "v-compare" },
         block("你的執行結果", e.exec_user, true), block("預期結果", e.exec_ref, true)) : null,
       block("參考答案", e.reference_answer, isCode),
-      e.misconception_label ? h("p", { class: "jr-mis" }, `📝 迷思筆記：${e.misconception_label}`) : null));
+      e.misconception_label ? h("p", { class: "jr-mis" }, `迷思筆記：${e.misconception_label}`) : null));
 }
 
 // ======================================================================
@@ -1105,7 +1107,7 @@ function renderLesson(l) {
     h("legend", null, "先選把握度 ", h("b", null, "（必選）")),
     h("div", { class: "conf-opts" }, ["high", "mid", "low"].map((c) => h("label", { class: "conf-opt" },
       h("input", { type: "radio", name: confName, value: c, required: true }),
-      h("span", null, CONF_TEXT[c])))));
+      h("span", null, sdot(c), CONF_TEXT[c])))));
   const ta = h("textarea", {
     id: nextId("ans"), class: mono ? "mono" : null, rows: isCode ? 7 : 4, maxlength: isCode ? 5000 : 2000, required: true,
     spellcheck: isCode ? "false" : null, autocapitalize: "off",
@@ -1145,7 +1147,7 @@ function dictationBar(ta, offerEnglish) {
   let rec = null;
   let base = "";            // 開始錄音時作答框原有的文字
   let finalText = "";       // 這次錄音已確定的文字
-  const btn = h("button", { type: "button", class: "btn btn-ghost mic-btn", "aria-pressed": "false" }, "🎤 語音輸入");
+  const btn = h("button", { type: "button", class: "btn btn-ghost mic-btn", "aria-pressed": "false" }, "語音輸入");
   const langSel = offerEnglish
     ? h("select", { class: "mic-lang", "aria-label": "辨識語言" },
         h("option", { value: "zh-TW" }, "中文"), h("option", { value: "en-US" }, "English"))
@@ -1156,7 +1158,7 @@ function dictationBar(ta, offerEnglish) {
   const stop = () => { try { rec?.stop(); } catch { /* 已停止 */ } };
   const setOn = (on) => {
     btn.setAttribute("aria-pressed", String(on));
-    btn.textContent = on ? "■ 停止" : "🎤 語音輸入";
+    btn.textContent = on ? "停止錄音" : "語音輸入";
     btn.classList.toggle("on", on);
   };
 
@@ -1264,7 +1266,7 @@ function loadMermaid() {
         startOnLoad: false,
         securityLevel: "strict",
         theme: "dark",
-        fontFamily: "Geist, 'Noto Sans TC', sans-serif",
+        fontFamily: "'Noto Sans TC', system-ui, sans-serif",
         themeVariables: { background: "#0e0e12", primaryColor: "#1d1d24", primaryTextColor: "#f5f5f6", lineColor: "#8f8f97", primaryBorderColor: "#f0a46a" },
       });
       return mermaid;
@@ -1366,7 +1368,7 @@ async function submitAnswer(l, form, ta, confName, msg, submitBtn, result) {
   const conf = form.querySelector(`input[name="${confName}"]:checked`)?.value;
   const answer = ta.value;
   msg.classList.remove("err");
-  if (!conf) { msg.textContent = "請先選把握度：🟢 有把握、🟡 不太確定，或 🔴 用猜的。"; msg.classList.add("err"); form.querySelector(`input[name="${confName}"]`).focus({ preventScroll: true }); return; }
+  if (!conf) { msg.textContent = "請先選把握度：有把握、不太確定，或用猜的。"; msg.classList.add("err"); form.querySelector(`input[name="${confName}"]`).focus({ preventScroll: true }); return; }
   if (!answer.trim()) { msg.textContent = "還沒寫答案喔。"; msg.classList.add("err"); ta.focus(); return; }
   const limit = Number(ta.getAttribute("maxlength")) || 2000;
   if (answer.length > limit) { msg.textContent = `答案太長了（上限 ${limit} 字）。`; msg.classList.add("err"); return; }
@@ -1440,7 +1442,7 @@ function renderVerdict(l, res, execRes, conf, box) {
   const delta = typeof res.delta === "number" && r !== "unjudgeable"
     ? h("span", { class: "v-delta" }, `${res.delta > 0 ? "+" : ""}${res.delta} 分 · 節點 ${res.node?.score ?? "?"}/6 · ${STATUS_TEXT[res.node?.status] || ""}`)
     : null;
-  parts.push(h("div", { class: "v-result" }, RESULT_TEXT[r] || r, delta));
+  parts.push(h("div", { class: "v-result" }, sdot(r), RESULT_TEXT[r] || r, delta));
   if (res.danger) {
     parts.push(h("div", { class: "v-danger", role: "alert" },
       "🚨 危險迷思：你選了「有把握」，但答案錯了。這種「以為自己會」的觀念最需要修正，已經記進迷思筆記，之後會換個情境再考你。"));
@@ -1458,7 +1460,7 @@ function renderVerdict(l, res, execRes, conf, box) {
     parts.push(h("details", { class: "v-ref" }, h("summary", null, "看參考答案"), h("pre", { class: "code", text: res.reference_answer })));
   }
   if (res.misconception_label) {
-    parts.push(h("div", null, h("span", { class: "mis-tag" }, "📝 迷思筆記：", h("span", { text: res.misconception_label }))));
+    parts.push(h("div", null, h("span", { class: "mis-tag" }, "迷思筆記：", h("span", { text: res.misconception_label }))));
   }
   parts.push(h("div", { class: "v-actions" },
     h("button", { type: "button", class: "btn btn-primary", onclick: () => startLesson(nextReq()) }, "下一題"),
