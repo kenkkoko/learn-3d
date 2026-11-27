@@ -18,7 +18,7 @@
 <meta property="og:image" content="https://learn.hellokai07.com/icons/icon-512.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="./app.css" />
 <script type="importmap">
 {
@@ -47,7 +47,7 @@
   <!-- 左欄：主題房間 -->
   <aside class="sidebar" id="sidebar" aria-label="主題清單">
     <div class="sidebar-head">
-      <a class="brand" href="./"><span class="brand-dot" aria-hidden="true"></span>Learn 3D</a>
+      <a class="brand" href="./"><img class="brand-mark" src="./favicon.svg" alt="" />Learn 3D</a>
       <span class="mock-badge" id="mockBadge" hidden>示範資料</span>
       <button type="button" class="icon-btn desk-only" id="collapseSidebar" aria-label="收合主題清單" aria-controls="sidebar" aria-expanded="true" title="收合主題清單">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
@@ -84,7 +84,6 @@
   <!-- 中間：學習路徑 + 星雲 -->
   <main class="stage" id="stage">
     <section class="empty" id="emptyState" hidden>
-      <div class="eyebrow">Learn 3D</div>
       <h1>想學什麼？</h1>
       <p class="lead">輸入一個主題或寫一段描述，回答 3–4 個小問題，就會產生你的學習路徑星雲。</p>
       <button type="button" class="btn btn-primary" data-action="new-topic">＋ 學新主題</button>
@@ -93,7 +92,7 @@
     <section class="topic" id="topicView" hidden>
       <header class="topic-head">
         <div class="topic-title-wrap">
-          <div class="eyebrow">學習路徑 · <span id="topicSlug"></span></div>
+          <span id="topicSlug" hidden></span>
           <h1 class="topic-title" id="topicTitle"></h1>
           <div class="topic-meta" id="topicMeta"></div>
         </div>
